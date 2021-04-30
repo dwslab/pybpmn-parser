@@ -2,13 +2,13 @@
 
 Starter code for using the [hdBPMN] dataset for diagram recognition research.
 
-The repository contains a script to convert the images and BPMN XMLs into a [COCO] dataset.
-The COCO format is a common format used in computer vision research to annotate the objects and keypoints in images.
+The [dump_coco.py](./scripts/dump_coco.py) script can be used to convert the images and BPMN XMLs into a [COCO] dataset.
+COCO is a common format used in computer vision research to annotate the objects and keypoints in images.
 ```shell
 python scripts/dump_coco.py path/to/hdBPMN path/to/target/coco/directory/hdbpmn
 ```
 
-Moreover, the repository contains a [demo.ipynb](./notebooks/demo.ipynb) Jupyter notebook to visualize
+Moreover, the [demo.ipynb](./notebooks/demo.ipynb) Jupyter notebook can be used to visualize
 (1) the extracted bounding boxes, keypoints, and relations,
 and (2) the annotated BPMN diagram overlayed over the hand-drawn image.
 Note that the latter requires the [bpmn-to-image] tool, which in turn requires a nodejs installation.
