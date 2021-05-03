@@ -20,10 +20,11 @@ _logger = logging.getLogger(__name__)
 
 
 class Visualizer:
-    def __init__(self, bpmn_path: Path, img_path: Path, color="orange"):
+    def __init__(self, bpmn_path: Path, img_path: Path, color="orange", alpha=1.0):
         self.bpmn_path = bpmn_path
         self.img_path = img_path
         self.color = color
+        self.alpha = alpha
         self.img_id = bpmn_path.stem
 
     def create_bpmn_overlay_img(self):
@@ -32,7 +33,7 @@ class Visualizer:
         img_w = parse_annotation_background_width(self.bpmn_path)
         return self.create_overlayed_hw_img(img_bpmn, img_w=img_w)
 
-    def create_overlayed_hw_img(self, img_bpmn: Image.Image, img_w=None, alpha=1.0) -> Image.Image:
+    def create_overlayed_hw_img(self, img_bpmn: Image.Image, img_w=None) -> Image.Image:
         img_hw = yamlu.read_img(self.img_path)
 
         scale = img_hw.width / img_w
@@ -51,10 +52,10 @@ class Visualizer:
         else:
             img_bpmn_transparent = img_ops.white_to_transparency(img_bpmn, thresh=200)
             img_bpmn_transparent = img_ops.black_to_color(img_bpmn_transparent, self.color)
-            if alpha < 1.0:
+            if self.alpha < 1.0:
                 # noinspection PyTypeChecker
                 img_np = np.asarray(img_bpmn_transparent).copy()
-                img_np[..., -1] = np.round(img_np[..., -1] * alpha).astype(img_np.dtype)
+                img_np[..., -1] = np.round(img_np[..., -1] * self.alpha).astype(img_np.dtype)
                 img_bpmn_transparent = Image.fromarray(img_np)
             img_overlay.paste(img_bpmn_transparent, mask=img_bpmn_transparent)
 

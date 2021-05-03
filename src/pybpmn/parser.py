@@ -55,7 +55,7 @@ class BpmnParser:
         arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
 
         try:
-            anns = _parse_bpmn_anns(bpmn_path)
+            anns = parse_bpmn_anns(bpmn_path)
             for a in anns:
                 a.bb = a.bb.scale(scale)
 
@@ -136,7 +136,7 @@ def get_category(bpmndi_element: Element, model_element: Element):
     return category
 
 
-def _parse_bpmn_anns(bpmn_path: Path) -> List[Annotation]:
+def parse_bpmn_anns(bpmn_path: Path) -> List[Annotation]:
     document = etree.parse(str(bpmn_path))
     root = document.getroot()
 
