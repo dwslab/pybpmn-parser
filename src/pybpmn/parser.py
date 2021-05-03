@@ -42,8 +42,12 @@ class BpmnParser:
         )
 
     # noinspection PyPropertyAccess
-    def parse_bmpn_img_path(self, bpmn_path: Path, img_hw_path: Path) -> AnnotatedImage:
-        img = yamlu.read_img(img_hw_path)
+    def parse_bpmn_img(self, bpmn_path: Path, img_path: Path) -> AnnotatedImage:
+        """
+        :param bpmn_path: path to the BPMN XML file
+        :param img_path: path to the corresponding BPMN image
+        """
+        img = yamlu.read_img(img_path)
         img_w, img_h = img.size
 
         img_w_annotation = parse_annotation_background_width(bpmn_path)
@@ -82,7 +86,7 @@ class BpmnParser:
         anns = [a for a in anns if a.category not in self.excluded_categories]
 
         return AnnotatedImage(
-            img_hw_path.name,
+            img_path.name,
             width=img.width,
             height=img.height,
             annotations=anns,
@@ -132,7 +136,7 @@ def get_category(bpmndi_element: Element, model_element: Element):
     return category
 
 
-def _parse_bpmn_anns(bpmn_path) -> List[Annotation]:
+def _parse_bpmn_anns(bpmn_path: Path) -> List[Annotation]:
     document = etree.parse(str(bpmn_path))
     root = document.getroot()
 

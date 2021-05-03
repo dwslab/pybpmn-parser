@@ -22,7 +22,7 @@ def to_int_or_float(s):
 
 
 def get_omgdi_ns(element):
-    # sometimes instead of omgdi namespace is prefixed as di in xml
+    # sometimes namespace in xml is prefixed as di instead of omgdi
     if "omgdi" in element.nsmap:
         return "omgdi"
     assert "di" in element.nsmap, f"{element.nsmap}"

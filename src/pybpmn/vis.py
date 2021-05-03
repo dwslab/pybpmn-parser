@@ -7,27 +7,16 @@ from pathlib import Path
 from typing import List, Tuple
 from xml.etree.ElementTree import Element
 
-import matplotlib.pyplot as plt
 import numpy as np
 import yamlu
 from PIL import Image
 from lxml import etree
 from yamlu import img_ops
-from yamlu.img import BoundingBox, AnnotatedImage
+from yamlu.img import BoundingBox
 
-from pybpmn import syntax
 from pybpmn.util import bounds_to_bb, to_int_or_float, get_omgdi_ns, parse_annotation_background_width
 
 _logger = logging.getLogger(__name__)
-
-
-def plot_waypoints(ai: AnnotatedImage, key="waypoints", plot_head_tail=False):
-    for a in ai.filter(*syntax.BPMNDI_EDGE_CATEGORIES):
-        xs, ys = a.get(key).T
-        plt.scatter(xs, ys, s=100, color="orange", edgecolor="black", alpha=0.8)
-        if plot_head_tail:
-            plt.scatter(*a.tail, s=200, marker="x")
-            plt.scatter(*a.head, s=200, marker=">")
 
 
 class Visualizer:

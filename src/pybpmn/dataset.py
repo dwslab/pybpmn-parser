@@ -56,7 +56,7 @@ class HdBpmnDataset(Dataset):
         bpmn_path = self.split_to_bpmn_paths[split][idx]
 
         img_path = self.get_img_path(bpmn_path.stem)
-        ai = self.bpmn_parser.parse_bmpn_img_path(bpmn_path, img_path)
+        ai = self.bpmn_parser.parse_bpmn_img(bpmn_path, img_path)
 
         # "id" is reserved in coco, therefore use other field name
         for a in ai.annotations:
