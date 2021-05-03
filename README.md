@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dwslab/pybpmn.svg?branch=main)](https://travis-ci.org/dwslab/pybpmn)
+
 # pybpmn
 
 Starter code for using the [hdBPMN] dataset for diagram recognition research.
