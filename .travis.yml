@@ -19,22 +19,9 @@ jobs:
     - env: DISTRIB="conda" PYTHON_VERSION="3.8" COVERAGE="false"
 install:
   - source tests/travis_install.sh
-before_script:
-  - git config --global user.email "bernhard@informatik.uni-mannheim.de"
-  - git config --global user.name "Bernhard Schäfer"
-  # Useful information in case of debug
-  - if [[ "$DISTRIB" == "conda" ]]; then conda info -a; fi
-  - which tox
 script:
   - tox -e build
   - tox
-  - |
-    if [[ "$COVERAGE" == "true" ]]; then
-      pre-commit install
-      pre-commit run --all-files
-    fi
-after_success:
-  - if [[ "$COVERAGE" == "true" ]]; then coveralls || echo "failed"; fi
 after_script:
   - travis-cleanup
 cache:
