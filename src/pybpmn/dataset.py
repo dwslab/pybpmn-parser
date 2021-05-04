@@ -12,7 +12,7 @@ from pybpmn.parser import BpmnParser
 from pybpmn.syntax import (
     BPMNDI_EDGE_CATEGORIES,
     CATEGORY_GROUPS,
-    CATEGORY_TO_PAPER_NAME,
+    CATEGORY_TO_LONG_NAME,
     EVENT_CATEGORY_TO_NO_POS_TYPE,
 )
 from pybpmn.util import split_img_id
@@ -132,7 +132,7 @@ class HdBpmnDataset(Dataset):
                     "supercategory": supercategory,
                     "id": i,
                     "name": category,
-                    "longname": CATEGORY_TO_PAPER_NAME[category],
+                    "longname": CATEGORY_TO_LONG_NAME[category],
                 }
                 if category in BPMNDI_EDGE_CATEGORIES:
                     coco_cat["keypoints"] = ["head", "tail"]

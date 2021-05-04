@@ -20,9 +20,13 @@ TIMER_INTERMEDIATE_EVENT = "timerIntermediateEvent"
 TIMER_EVENTS = ["timerStartEvent", TIMER_INTERMEDIATE_EVENT]
 
 INTERMEDIATE_EVENT = "intermediateEvent"
+TERMINATE_EVENT = "terminateEvent"
 EVENT_CATEGORIES = (
-        ["startEvent", INTERMEDIATE_EVENT, "endEvent"] + MESSAGE_EVENTS + TIMER_EVENTS
+        ["startEvent", INTERMEDIATE_EVENT, "endEvent", TERMINATE_EVENT] + MESSAGE_EVENTS + TIMER_EVENTS
 )
+# Event definitions are modeled as child elements in BPMN XML:
+# terminateEventDefinition, messageEventDefinition, timerEventDefinition
+EVENT_DEFINITIONS = ["message", "timer", "terminate"]
 
 GATEWAY_CATEGORIES = [
     "exclusiveGateway",
@@ -93,20 +97,20 @@ EVENT_CATEGORY_TO_NO_POS_TYPE = {
     "timerIntermediateEvent": "timerEvent",
 }
 
-CATEGORY_TO_PAPER_NAME = {
+CATEGORY_TO_LONG_NAME = {
     "task": "Task",
     "subProcessCollapsed": "Subprocess (collapsed)",
     "subProcessExpanded": "Subprocess (expanded)",
     "callActivity": "Call Activity",
     "startEvent": "Start Event",
-    "intermediateEvent": "Intermediate Event",
+    INTERMEDIATE_EVENT: "Intermediate Event",
     "endEvent": "End Event",
     "messageStartEvent": "Message Start Event",
     "messageIntermediateCatchEvent": "Message Intermediate Catch Event",
     "messageIntermediateThrowEvent": "Message Intermediate Throw Event",
     "messageEndEvent": "Message End Event",
     "timerStartEvent": "Timer Start Event",
-    "timerIntermediateEvent": "Timer Intermediate Event",
+    TIMER_INTERMEDIATE_EVENT: "Timer Intermediate Event",
     "exclusiveGateway": "Exclusive Gateway",
     "parallelGateway": "Parallel Gateway",
     "inclusiveGateway": "Inclusive Gateway",
@@ -117,25 +121,31 @@ CATEGORY_TO_PAPER_NAME = {
     "association": "Association",
     "pool": "Pool",
     "lane": "Lane",
-    "dataObject": "Data Object",
-    "dataStore": "Data Store",
+    DATA_OBJECT: "Data Object",
+    DATA_STORE: "Data Store",
     "textAnnotation": "Text Annotation",
     "label": "Label",
     "event": "Event",
     "messageEvent": "Message Event",
     "timerEvent": "Timer Event",
+    "terminateEvent": "Terminate Event",
     "subProcess": "Subprocess",
 }
 
 
 def _check_inconsistencies():
-    n1 = (
+    n_bpmndi = (
             len(BPMNDI_SHAPE_CATEGORIES)
             + len(BPMNDI_EDGE_CATEGORIES)
             + len(BPMNDI_LABEL_CATEGORIES)
     )
-    n2 = sum(len(g) for g in CATEGORY_GROUPS.values())
-    assert n1 == n2, f"{n1}, {n2}"
+    n_cats = sum(len(g) for g in CATEGORY_GROUPS.values())
+    assert n_bpmndi == n_cats, f"{n_bpmndi}, {n_cats}"
+
+    long_cat_names = set(CATEGORY_TO_LONG_NAME.keys())
+    all_cats = set(yamlu.flatten(CATEGORY_GROUPS.values()))
+    diff = all_cats.difference(long_cat_names)
+    assert len(diff) == 0, diff
 
 
 _check_inconsistencies()

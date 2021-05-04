@@ -16,6 +16,7 @@ from pybpmn.constants import (
     ARROW_RELATIONS,
     TEXT_BELONGS_TO_REL,
 )
+from pybpmn.syntax import EVENT_DEFINITIONS
 from pybpmn.util import bounds_to_bb, to_int_or_float, get_omgdi_ns, parse_annotation_background_width
 
 _logger = logging.getLogger(__name__)
@@ -105,18 +106,20 @@ def get_category(bpmndi_element: Element, model_element: Element):
     # remove namespace from tag
     category: str = get_tag_without_ns(model_element)
 
-    # something that ends with Event, i.e. startEvent, endEvent, intermediateCatchEvent
+    # startEvent, endEvent, intermediateCatchEvent, intermediateThrowEvent
     if category.endswith("Event"):
-        for event_type in ["message", "timer"]:
-            # noinspection PyUnresolvedReferences
+        for event_type in EVENT_DEFINITIONS:
+            # types are definition childrens: terminateEventDefinition, messageEventDefinition, timerEventDefinition
             if model_element.find(f"{event_type}EventDefinition", model_element.nsmap) is not None:
-                # startEvent -> messageStartEvent
+                # startEvent -> messageStartEvent, endEvent -> terminateEndEvent, ...
                 category = f"{event_type}{category[0].upper()}{category[1:]}"
-    # further shortening of events
+    # further shortening of untyped  and terminate events
     if category == "intermediateThrowEvent":
         category = syntax.INTERMEDIATE_EVENT
     elif category == "timerIntermediateCatchEvent":
         category = syntax.TIMER_INTERMEDIATE_EVENT
+    elif category == "terminateEndEvent":
+        category = syntax.TERMINATE_EVENT  # terminate only exists an end event
     elif category == "participant":
         category = syntax.POOL
     elif category == "subProcess":
