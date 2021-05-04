@@ -20,7 +20,7 @@ TIMER_INTERMEDIATE_EVENT = "timerIntermediateEvent"
 TIMER_EVENTS = ["timerStartEvent", TIMER_INTERMEDIATE_EVENT]
 
 INTERMEDIATE_EVENT = "intermediateEvent"
-TERMINATE_EVENT = "terminateEvent"
+TERMINATE_EVENT = "terminateEndEvent"
 EVENT_CATEGORIES = (
         ["startEvent", INTERMEDIATE_EVENT, "endEvent", TERMINATE_EVENT] + MESSAGE_EVENTS + TIMER_EVENTS
 )
@@ -128,7 +128,7 @@ CATEGORY_TO_LONG_NAME = {
     "event": "Event",
     "messageEvent": "Message Event",
     "timerEvent": "Timer Event",
-    "terminateEvent": "Terminate Event",
+    TERMINATE_EVENT: "Terminate End Event",
     "subProcess": "Subprocess",
 }
 

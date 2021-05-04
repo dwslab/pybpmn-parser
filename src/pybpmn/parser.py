@@ -118,8 +118,6 @@ def get_category(bpmndi_element: Element, model_element: Element):
         category = syntax.INTERMEDIATE_EVENT
     elif category == "timerIntermediateCatchEvent":
         category = syntax.TIMER_INTERMEDIATE_EVENT
-    elif category == "terminateEndEvent":
-        category = syntax.TERMINATE_EVENT  # terminate only exists an end event
     elif category == "participant":
         category = syntax.POOL
     elif category == "subProcess":
