@@ -42,7 +42,7 @@ def bpmn_to_image(bpmn_path: Path, png_path: Path, shift_to_origin=False):
 
         size = math.ceil(left_offset + img.width), math.ceil(top_offset + img.height)
         img_orig_size = Image.new("RGBA", size, (255, 255, 255, 0))
-        img_orig_size.paste(img, box=(round(left_offset), round(top_offset)))
+        img_orig_size.paste(img, box=(int(round(left_offset)), int(round(top_offset))))
         img = img_orig_size
 
     img.save(png_path)
