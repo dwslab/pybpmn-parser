@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dwslab/pybpmn.svg?branch=main)](https://travis-ci.org/dwslab/pybpmn)
+[![Build Status](https://travis-ci.com/dwslab/pybpmn.svg?branch=main)](https://travis-ci.com/dwslab/pybpmn)
 
 # pybpmn
 
