@@ -3,19 +3,11 @@ dependencies:
   - python=3.8
   - ipython
   - pip
-  - numpy
-  - tqdm
   - ipykernel
   - nbformat # for %run in jupyter
-  - matplotlib
-  - pillow
-  - lxml # Python ElementTree handling of namespaces is very inconvenient
-  - click
-  - joblib
+  - click # scripts
   - pip:
       - -e .  # install git checkout of pybpmn in editable mode
-      #- git+ssh://git@github.com/bernhardschaefer/yamlu.git
-      - git+https://github.com/bernhardschaefer/yamlu.git
   # DEVELOPMENT ONLY PACKAGES (could also be kept in a separate environment file)
       - pre_commit
       - tox
