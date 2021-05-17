@@ -14,7 +14,8 @@ dependencies:
   - joblib
   - pip:
       - -e .  # install git checkout of pybpmn in editable mode
-      - git+ssh://git@github.com/bernhardschaefer/yamlu.git
+      #- git+ssh://git@github.com/bernhardschaefer/yamlu.git
+      - git+https://github.com/bernhardschaefer/yamlu.git
   # DEVELOPMENT ONLY PACKAGES (could also be kept in a separate environment file)
       - pre_commit
       - tox
