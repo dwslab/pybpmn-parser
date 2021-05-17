@@ -11,5 +11,3 @@ dependencies:
   # DEVELOPMENT ONLY PACKAGES (could also be kept in a separate environment file)
       - pre_commit
       - tox
-  - pytest
-  - pytest-cov
