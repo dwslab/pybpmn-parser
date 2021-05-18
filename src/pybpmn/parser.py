@@ -246,9 +246,12 @@ def _shape_to_anns(shape: Element, model_element: Element) -> List[Annotation]:
 def _link_text_rel_anns(anns):
     id_to_ann = {a.id: a for a in anns if a.category != "label"}
 
-    for a in anns:
-        if a.category == "label":
-            a.set(TEXT_BELONGS_TO_REL, id_to_ann[a.get(TEXT_BELONGS_TO_REL)])
+    lbl_anns = [a for a in anns if a.category == "label"]
+
+    for lbl_ann in lbl_anns:
+        symb_ann = id_to_ann[lbl_ann.get(TEXT_BELONGS_TO_REL)]
+        lbl_ann.set(TEXT_BELONGS_TO_REL, symb_ann)
+        symb_ann.set(TEXT_BELONGS_TO_REL, lbl_ann)
 
 
 def _parse_edge_attribs(model_element):
