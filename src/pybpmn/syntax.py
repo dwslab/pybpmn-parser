@@ -57,7 +57,9 @@ BPMNDI_SHAPE_CATEGORIES = [
 # - bpmn dataInputAssociation and dataOutputAssociation are collapsed into a single dataAssociation category
 DATA_ASSOCIATION = "dataAssociation"
 MESSAGE_FLOW = "messageFlow"
-BPMNDI_EDGE_CATEGORIES = ["sequenceFlow", MESSAGE_FLOW, DATA_ASSOCIATION, "association"]
+SEQUENCE_FLOW = "sequenceFlow"
+ASSOCIATION = "association"
+BPMNDI_EDGE_CATEGORIES = [SEQUENCE_FLOW, MESSAGE_FLOW, DATA_ASSOCIATION, ASSOCIATION]
 
 # bpmndi:BPMNLabel
 LABEL = "label"
@@ -115,12 +117,12 @@ CATEGORY_TO_LONG_NAME = {
     "parallelGateway": "Parallel Gateway",
     "inclusiveGateway": "Inclusive Gateway",
     "eventBasedGateway": "Event-based Gateway",
-    "sequenceFlow": "Sequence Flow",
-    "messageFlow": "Message Flow",
-    "dataAssociation": "Data Association",
-    "association": "Association",
-    "pool": "Pool",
-    "lane": "Lane",
+    SEQUENCE_FLOW: "Sequence Flow",
+    MESSAGE_FLOW: "Message Flow",
+    DATA_ASSOCIATION: "Data Association",
+    ASSOCIATION: "Association",
+    POOL: "Pool",
+    LANE: "Lane",
     DATA_OBJECT: "Data Object",
     DATA_STORE: "Data Store",
     "textAnnotation": "Text Annotation",

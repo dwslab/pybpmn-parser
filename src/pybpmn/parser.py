@@ -24,12 +24,17 @@ _logger = logging.getLogger(__name__)
 BPMN_ATTRIB_TO_RELATION = {"sourceRef": ARROW_PREV_REL, "targetRef": ARROW_NEXT_REL}
 
 
+def parse_bpmn_anns(bpmn_path: Path):
+    return BpmnParser().parse_bpmn_anns(bpmn_path)
+
+
 class BpmnParser:
     def __init__(
             self,
             arrow_min_wh: int = 20,
             img_max_size_ref: int = 1000,
             excluded_categories: Set[str] = None,
+            link_text_rel_two_way: bool = False
     ):
         """
         :param arrow_min_wh: pad edge bounding boxes so that their w and h is at least arrow_min_wh
@@ -41,6 +46,7 @@ class BpmnParser:
         self.excluded_categories = (
             {} if excluded_categories is None else excluded_categories
         )
+        self.link_text_rel_two_way = link_text_rel_two_way
 
     # noinspection PyPropertyAccess
     def parse_bpmn_img(self, bpmn_path: Path, img_path: Path) -> AnnotatedImage:
@@ -56,7 +62,7 @@ class BpmnParser:
         arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
 
         try:
-            anns = parse_bpmn_anns(bpmn_path)
+            anns = self.parse_bpmn_anns(bpmn_path)
             for a in anns:
                 a.bb = a.bb.scale(scale)
 
@@ -93,6 +99,53 @@ class BpmnParser:
             annotations=anns,
             img=img,
         )
+
+    def parse_bpmn_anns(self, bpmn_path: Path) -> List[Annotation]:
+        document = etree.parse(str(bpmn_path))
+        root = document.getroot()
+
+        id_to_obj = {}
+
+        for collaboration in root.findall("collaboration", root.nsmap):
+            id_to_obj.update(_create_id_to_obj_mapping(collaboration))
+
+        for process in root.findall("process", root.nsmap):
+            id_to_obj.update(_create_id_to_obj_mapping(process))
+
+        diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
+        plane = diagram[0]
+        shapes = plane.findall("bpmndi:BPMNShape", plane.nsmap)
+        shape_anns = yamlu.flatten(
+            _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")])
+            for shape in shapes
+        )
+        id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
+
+        edges = plane.findall("bpmndi:BPMNEdge", plane.nsmap)
+
+        edge_anns = []
+        for edge in edges:
+            model_id = edge.get("bpmnElement")
+            if model_id not in id_to_obj:
+                raise ValueError(f"{bpmn_path}: {model_id} not in model element ids")
+            edge_anns.append(_edge_to_anns(edge, id_to_obj[model_id], id_to_shape_ann))
+
+        edge_anns = yamlu.flatten(edge_anns)
+
+        anns = shape_anns + edge_anns
+        self._link_text_rel_anns(anns)
+        return anns
+
+    def _link_text_rel_anns(self, anns):
+        id_to_ann = {a.id: a for a in anns if a.category != "label"}
+
+        lbl_anns = [a for a in anns if a.category == "label"]
+
+        for lbl_ann in lbl_anns:
+            symb_ann = id_to_ann[lbl_ann.get(TEXT_BELONGS_TO_REL)]
+            lbl_ann.set(TEXT_BELONGS_TO_REL, symb_ann)
+            if self.link_text_rel_two_way:
+                symb_ann.set(TEXT_BELONGS_TO_REL, lbl_ann)
 
 
 def get_tag_without_ns(element: Element):
@@ -135,43 +188,6 @@ def get_category(bpmndi_element: Element, model_element: Element):
     assert category in syntax.ALL_CATEGORIES, f"unknown category: {category}"
 
     return category
-
-
-def parse_bpmn_anns(bpmn_path: Path) -> List[Annotation]:
-    document = etree.parse(str(bpmn_path))
-    root = document.getroot()
-
-    id_to_obj = {}
-
-    for collaboration in root.findall("collaboration", root.nsmap):
-        id_to_obj.update(_create_id_to_obj_mapping(collaboration))
-
-    for process in root.findall("process", root.nsmap):
-        id_to_obj.update(_create_id_to_obj_mapping(process))
-
-    diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
-    plane = diagram[0]
-    shapes = plane.findall("bpmndi:BPMNShape", plane.nsmap)
-    shape_anns = yamlu.flatten(
-        _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")])
-        for shape in shapes
-    )
-    id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
-
-    edges = plane.findall("bpmndi:BPMNEdge", plane.nsmap)
-
-    edge_anns = []
-    for edge in edges:
-        model_id = edge.get("bpmnElement")
-        if model_id not in id_to_obj:
-            raise ValueError(f"{bpmn_path}: {model_id} not in model element ids")
-        edge_anns.append(_edge_to_anns(edge, id_to_obj[model_id], id_to_shape_ann))
-
-    edge_anns = yamlu.flatten(edge_anns)
-
-    anns = shape_anns + edge_anns
-    _link_text_rel_anns(anns)
-    return anns
 
 
 def _create_id_to_obj_mapping(element):
@@ -241,17 +257,6 @@ def _shape_to_anns(shape: Element, model_element: Element) -> List[Annotation]:
         anns.append(lbl_ann)
 
     return anns
-
-
-def _link_text_rel_anns(anns):
-    id_to_ann = {a.id: a for a in anns if a.category != "label"}
-
-    lbl_anns = [a for a in anns if a.category == "label"]
-
-    for lbl_ann in lbl_anns:
-        symb_ann = id_to_ann[lbl_ann.get(TEXT_BELONGS_TO_REL)]
-        lbl_ann.set(TEXT_BELONGS_TO_REL, symb_ann)
-        symb_ann.set(TEXT_BELONGS_TO_REL, lbl_ann)
 
 
 def _parse_edge_attribs(model_element):
