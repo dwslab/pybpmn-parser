@@ -4,10 +4,11 @@ POOL = "pool"
 LANE = "lane"
 COLLABORATION_CATEGORIES = [POOL, LANE]
 
+SUBPROCESS_EXPANDED = "subProcessExpanded"
 ACTIVITY_CATEGORIES = [
     "task",
     "subProcessCollapsed",
-    "subProcessExpanded",
+    SUBPROCESS_EXPANDED,
     "callActivity",
 ]
 MESSAGE_EVENTS = [
@@ -102,7 +103,7 @@ EVENT_CATEGORY_TO_NO_POS_TYPE = {
 CATEGORY_TO_LONG_NAME = {
     "task": "Task",
     "subProcessCollapsed": "Subprocess (collapsed)",
-    "subProcessExpanded": "Subprocess (expanded)",
+    SUBPROCESS_EXPANDED: "Subprocess (expanded)",
     "callActivity": "Call Activity",
     "startEvent": "Start Event",
     INTERMEDIATE_EVENT: "Intermediate Event",
