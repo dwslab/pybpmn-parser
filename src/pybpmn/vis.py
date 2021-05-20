@@ -52,23 +52,24 @@ def bpmn_to_image(bpmn_path: Path, png_path: Path, shift_to_origin=False):
 
 
 class Visualizer:
-    def __init__(self, bpmn_path: Path, img_path: Path, color="orange", alpha=1.0):
-        self.bpmn_path = bpmn_path
-        self.img_path = img_path
+    def __init__(self, img: Image.Image, color="orange", alpha=1.0):
+        self.img = img
         self.color = color
         self.alpha = alpha
-        self.img_id = bpmn_path.stem
 
-    def create_bpmn_overlay_img(self):
+    @classmethod
+    def from_img_path(cls, img_path: Path, **kwargs):
+        img = yamlu.read_img(img_path)
+        return cls(img, **kwargs)
+
+    def create_bpmn_overlay_img(self, bpmn_path: Path):
         with tempfile.TemporaryDirectory() as tmpdirname:
-            img_bpmn = bpmn_to_image(self.bpmn_path, png_path=Path(tmpdirname) / f"{self.img_id}.png")
-        img_w = parse_annotation_background_width(self.bpmn_path)
+            img_bpmn = bpmn_to_image(bpmn_path, png_path=Path(tmpdirname) / f"{bpmn_path.stem}.png")
+        img_w = parse_annotation_background_width(bpmn_path)
         return self.create_overlayed_hw_img(img_bpmn, img_w=img_w)
 
     def create_overlayed_hw_img(self, img_bpmn: Image.Image, img_w=None) -> Image.Image:
-        img_hw = yamlu.read_img(self.img_path)
-
-        scale = img_hw.width / img_w
+        scale = self.img.width / img_w
 
         # https://stackoverflow.com/questions/13027169/scale-images-with-pil-preserving-transparency-and-color
         target_size = round(img_bpmn.width * scale), round(img_bpmn.height * scale)
@@ -77,7 +78,7 @@ class Visualizer:
         bands = [b.resize(target_size, Image.LINEAR) for b in bands]
         img_bpmn = Image.merge("RGBA", bands)
 
-        img_overlay = img_hw.convert("RGBA").copy()
+        img_overlay = self.img.convert("RGBA").copy()
         if self.color == "black":
             img_bpmn_transparent = img_ops.grayscale_transparency(img_bpmn)
             img_overlay.alpha_composite(img_bpmn_transparent)
