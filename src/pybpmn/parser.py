@@ -311,11 +311,12 @@ def _create_label_ann_if_exists(shape_or_edge, model_element) -> Optional[Annota
     if label is None:
         return None
 
-    a = Annotation(
-        category="label", bb=_child_bounds_to_bb(label), name=model_element.get("name")
-    )
-    a.set(TEXT_BELONGS_TO_REL, model_element.get("id"))
+    text = model_element.get("name")
+    if text is None or text.strip() == "":
+        return None
 
+    a = Annotation(category="label", bb=_child_bounds_to_bb(label), name=text)
+    a.set(TEXT_BELONGS_TO_REL, model_element.get("id"))
     return a
 
 
