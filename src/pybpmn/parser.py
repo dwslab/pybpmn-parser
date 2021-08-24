@@ -243,13 +243,11 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
 def _shape_to_anns(shape: Element, model_element: Element) -> List[Annotation]:
     category = get_category(shape, model_element)
 
-    shape_ann = Annotation(
-        category, bb=_child_bounds_to_bb(shape), **model_element.attrib
-    )
+    shape_ann = Annotation(category, bb=_child_bounds_to_bb(shape), **model_element.attrib)
     if get_tag_without_ns(model_element) == "textAnnotation":
         text_el = model_element.find("text", model_element.nsmap)
         if text_el is not None:
-            shape_ann.text = text_el.text
+            shape_ann.name = text_el.text
 
     anns = [shape_ann]
     lbl_ann = _create_label_ann_if_exists(shape, model_element)
@@ -291,15 +289,11 @@ def _parse_edge_attribs(model_element):
     elif tag == "dataInputAssociation":
         # overwrite Property targetRef
         # TODO what is this property for?
-        attrib[ARROW_PREV_REL] = model_element.find(
-            "sourceRef", model_element.nsmap
-        ).text
+        attrib[ARROW_PREV_REL] = model_element.find("sourceRef", model_element.nsmap).text
         attrib[ARROW_NEXT_REL] = model_element.getparent().get("id")
     elif tag == "dataOutputAssociation":
         attrib[ARROW_PREV_REL] = model_element.getparent().get("id")
-        attrib[ARROW_NEXT_REL] = model_element.find(
-            "targetRef", model_element.nsmap
-        ).text
+        attrib[ARROW_NEXT_REL] = model_element.find("targetRef", model_element.nsmap).text
     else:
         raise ValueError(f"Unknown edge tag: {tag}")
 
