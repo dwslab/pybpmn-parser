@@ -34,19 +34,27 @@ class BpmnParser:
             arrow_min_wh: int = 20,
             img_max_size_ref: int = 1000,
             excluded_categories: Set[str] = None,
-            link_text_rel_two_way: bool = False
+            excluded_label_categories: Set[str] = None,
+            link_text_rel_two_way: bool = False,
     ):
         """
         :param arrow_min_wh: pad edge bounding boxes so that their w and h is at least arrow_min_wh
                              when the image is scaled to img_max_size_ref
         :param img_max_size_ref: reference image size to consider for arrow_min_wh
+        :param excluded_label_categories: categories for which label annotations should not be parsed
         """
         self.arrow_min_wh = arrow_min_wh
         self.img_max_size_ref = img_max_size_ref
-        self.excluded_categories = (
-            {} if excluded_categories is None else excluded_categories
-        )
+        self.excluded_categories = {} if excluded_categories is None else excluded_categories
+        self.excluded_label_categories = {} if excluded_label_categories is None else excluded_label_categories
         self.link_text_rel_two_way = link_text_rel_two_way
+
+    def _is_included_ann(self, a: Annotation) -> bool:
+        if a.category in self.excluded_categories:
+            return False
+        if a.category == "label" and a.get(TEXT_BELONGS_TO_REL).category in self.excluded_label_categories:
+            return False
+        return True
 
     # noinspection PyPropertyAccess
     def parse_bpmn_img(self, bpmn_path: Path, img_path: Path) -> AnnotatedImage:
@@ -90,7 +98,7 @@ class BpmnParser:
             _logger.error("Error while processing: %s", bpmn_path)
             raise e
 
-        anns = [a for a in anns if a.category not in self.excluded_categories]
+        anns = [a for a in anns if self._is_included_ann(a)]
 
         return AnnotatedImage(
             img_path.name,

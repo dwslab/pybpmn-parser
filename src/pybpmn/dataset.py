@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Union
 
 import yamlu
 from yamlu.coco import Dataset
@@ -25,20 +25,19 @@ class HdBpmnDataset(Dataset):
             self,
             hdbpmn_root: Union[Path, str],
             coco_dataset_root: Union[Path, str],
-            excluded_categories: Set[str] = None,
             category_translate_dict: Dict[str, str] = EVENT_CATEGORY_TO_NO_POS_TYPE,
             keypoint_fields: List[str] = ARROW_KEYPOINT_FIELDS,
             relation_fields: List[str] = RELATIONS,
+            **parser_kwargs
     ):
         hdbpmn_root = Path(hdbpmn_root) if isinstance(hdbpmn_root, str) else hdbpmn_root
         assert hdbpmn_root.exists(), f"{hdbpmn_root} does not exist!"
         self.hdbpmn_root = hdbpmn_root.resolve() if not hdbpmn_root.is_absolute() else hdbpmn_root
 
-        self.excluded_categories = set() if excluded_categories is None else excluded_categories
         self.category_translate_dict = category_translate_dict
 
         self.split_to_bpmn_paths = self.get_split_to_bpmn_paths()
-        self.bpmn_parser = BpmnParser(excluded_categories=excluded_categories)
+        self.bpmn_parser = BpmnParser(**parser_kwargs)
         super().__init__(
             dataset_path=coco_dataset_root,
             split_n_imgs={s: len(ps) for s, ps in self.split_to_bpmn_paths.items()},
@@ -121,7 +120,7 @@ class HdBpmnDataset(Dataset):
         coco_categories = []
         for supercategory, categories in CATEGORY_GROUPS.items():
             for category in categories:
-                if category in self.excluded_categories:
+                if category in self.bpmn_parser.excluded_categories:
                     continue
                 category = self.category_translate_dict.get(category, category)
                 if category in seen_cats:
