@@ -177,7 +177,7 @@ def get_category(bpmndi_element: Element, model_element: Element):
         # <bpmndi:BPMNShape id="Activity_1cnm0ru_di" bpmnElement="Activity_1cnm0ru" isExpanded="true">
         #         <omgdc:Bounds x="473" y="455" width="452" height="190" />
         #       </bpmndi:BPMNShape>
-        is_expanded = bpmndi_element.get("isExpanded", False)
+        is_expanded = bpmndi_element.get("isExpanded", "false").lower() == "true"
         category = "subProcessExpanded" if is_expanded else "subProcessCollapsed"
     elif category in ["dataInputAssociation", "dataOutputAssociation"]:
         category = syntax.DATA_ASSOCIATION
