@@ -75,6 +75,7 @@ class Visualizer:
         target_size = round(img_bpmn.width * scale), round(img_bpmn.height * scale)
         # img_bpmn = img_bpmn.resize(target_size)
         bands = img_bpmn.split()
+        # TODO use other upsamling method?
         bands = [b.resize(target_size, Image.LINEAR) for b in bands]
         img_bpmn = Image.merge("RGBA", bands)
 
