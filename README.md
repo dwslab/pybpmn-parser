@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/dwslab/pybpmn.svg?branch=main)](https://travis-ci.com/dwslab/pybpmn)
+![run_tests workflow](https://github.com/dwslab/pybpmn/actions/workflows/run_tests.yaml/badge.svg)
 
 # pybpmn
 
