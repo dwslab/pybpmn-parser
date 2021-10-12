@@ -16,8 +16,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install pybmn and dependencies through setup.cfg
         run: |
-          python -m pip install --upgrade pip setuptools
+          python -m pip install -U pip setuptools virtualenv tox
           python setup.py install
-      - name: Test with pytest
+      - name: Building project
         run: |
-          pytest tests/
+          tox -e build
+      - name: Running tests
+        run: |
+          tox
