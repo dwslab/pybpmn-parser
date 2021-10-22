@@ -68,30 +68,30 @@ class Visualizer:
         img_w = parse_annotation_background_width(bpmn_path)
         return self.create_overlayed_hw_img(img_bpmn, img_w=img_w)
 
-    def create_overlayed_hw_img(self, img_bpmn: Image.Image, img_w=None) -> Image.Image:
+    def create_overlayed_hw_img(self, img_bpmn: Image.Image, img_w=None, interpolation=Image.LANCZOS) -> Image.Image:
         scale = self.img.width / img_w
 
         # https://stackoverflow.com/questions/13027169/scale-images-with-pil-preserving-transparency-and-color
         target_size = round(img_bpmn.width * scale), round(img_bpmn.height * scale)
         # img_bpmn = img_bpmn.resize(target_size)
         bands = img_bpmn.split()
-        # TODO use other upsamling method?
-        bands = [b.resize(target_size, Image.LINEAR) for b in bands]
+        bands = [b.resize(target_size, interpolation) for b in bands]
         img_bpmn = Image.merge("RGBA", bands)
 
         img_overlay = self.img.convert("RGBA").copy()
-        if self.color == "black":
-            img_bpmn_transparent = img_ops.grayscale_transparency(img_bpmn)
-            img_overlay.alpha_composite(img_bpmn_transparent)
-        else:
-            img_bpmn_transparent = img_ops.white_to_transparency(img_bpmn, thresh=200)
-            img_bpmn_transparent = img_ops.black_to_color(img_bpmn_transparent, self.color)
-            if self.alpha < 1.0:
-                # noinspection PyTypeChecker
-                img_np = np.asarray(img_bpmn_transparent).copy()
-                img_np[..., -1] = np.round(img_np[..., -1] * self.alpha).astype(img_np.dtype)
-                img_bpmn_transparent = Image.fromarray(img_np)
-            img_overlay.paste(img_bpmn_transparent, mask=img_bpmn_transparent)
+        # Update: this grayscale transparency with alpha is too thin
+        # if self.color == "black":
+        #    img_bpmn_transparent = img_ops.grayscale_transparency(img_bpmn)
+        #    img_overlay.alpha_composite(img_bpmn_transparent)
+        # else:
+        img_bpmn_transparent = img_ops.white_to_transparency(img_bpmn, thresh=200)
+        img_bpmn_transparent = img_ops.black_to_color(img_bpmn_transparent, self.color)
+        if self.alpha < 1.0:
+            # noinspection PyTypeChecker
+            img_np = np.asarray(img_bpmn_transparent).copy()
+            img_np[..., -1] = np.round(img_np[..., -1] * self.alpha).astype(img_np.dtype)
+            img_bpmn_transparent = Image.fromarray(img_np)
+        img_overlay.paste(img_bpmn_transparent, mask=img_bpmn_transparent)
 
         return img_overlay
 
