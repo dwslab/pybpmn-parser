@@ -9,9 +9,6 @@ from yamlu.img import BoundingBox
 
 def bounds_to_bb(bounds: Element) -> BoundingBox:
     xywh = {k: to_int_or_float(bounds.get(k)) for k in ["x", "y", "width", "height"]}
-    # if any([v < 0 for v in xywh.values()]):
-    #    etree.dump(shape)
-    #    etree.dump(model_element)
     bb = BoundingBox.from_xywh(**xywh, allow_neg_coord=True)
     return bb
 

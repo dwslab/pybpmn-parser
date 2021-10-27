@@ -34,8 +34,15 @@ def bpmn_to_image(bpmn_path: Path, png_path: Path, shift_to_origin=False):
     img: Image.Image = Image.open(png_path)
 
     if not shift_to_origin:
-        #  get bounding box from xml, and revert this shifting operation
-        bb = get_bpmn_bounding_box(bpmn_path)
+        # get bounding box from xml, and revert this shifting operation
+
+        # the bpmn bounding box and the image width/height sometimes do not match due to the BPMNLabels
+        # Example: leftmost shape is a start event label.
+        # in this case bb.l corresponds to label.l (i.e. BPMNLabel -> omgdc:Bounds -> x attrib in BPMN XML)
+        # however, in the generated image the label is typically much smaller due to a small font size
+        # this means i can't just place the generated image at the bpmn bounding box left+top offset
+        # TODO figure out how to generate image that is not aligned to origin
+        bb = _get_approx_bpmn_bounding_box(bpmn_path)
 
         left_offset = bb.lr_mid - img.width / 2.0
         top_offset = bb.tb_mid - img.height / 2.0
@@ -96,15 +103,38 @@ class Visualizer:
         return img_overlay
 
 
-def get_bpmn_bounding_box(bpmn_path):
+def _get_approx_bpmn_bounding_box(bpmn_path):
+    """
+    approximated get_bpmn_bounding_box for bpmn_to_image font bounding box issue
+    """
     document = etree.parse(str(bpmn_path))
-    return get_bpmn_bounding_box_doc(document)
+    root = document.getroot()
+
+    diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
+    shape_bounds = diagram.findall(".//bpmndi:BPMNShape/omgdc:Bounds", root.nsmap)
+    shape_bbs = [bounds_to_bb(bound) for bound in shape_bounds]
+
+    lbl_bounds = diagram.findall(".//bpmndi:BPMNLabel/omgdc:Bounds", root.nsmap)
+    lbl_bbs = [bounds_to_bb(bound) for bound in lbl_bounds]
+    for lbl_bb in lbl_bbs:
+        # bpmn-js seems to align font vertically to top, and horizontally to center
+        # since font is typically much smaller than handwriting, cut lower part of box as a heuristic
+        lbl_bb.b = lbl_bb.tb_mid
+
+    waypoints = diagram.findall(f".//{get_omgdi_ns(diagram)}:waypoint", diagram.nsmap)
+    pts = np.array([[to_int_or_float(wp.get("x")), to_int_or_float(wp.get("y"))] for wp in waypoints])
+    pts_bbs = [BoundingBox.from_points(pts, allow_neg_coord=True)] if len(pts) > 0 else []
+
+    bb = functools.reduce(lambda bb1, bb2: bb1.union(bb2), [*shape_bbs, *lbl_bbs, *pts_bbs])
+    return bb
 
 
-def get_bpmn_bounding_box_doc(document):
+def get_bpmn_bounding_box(bpmn_path):
     """
     :return: the smallest bounding box that covers all diagram symbols
     """
+    document = etree.parse(str(bpmn_path))
+
     bounds, waypoints = get_bpmn_bounds_waypoints(document)
 
     pts = np.array([[to_int_or_float(wp.get("x")), to_int_or_float(wp.get("y"))] for wp in waypoints])
@@ -117,7 +147,6 @@ def get_bpmn_bounding_box_doc(document):
 
 def get_bpmn_bounds_waypoints(document) -> Tuple[List[Element], List[Element]]:
     root = document.getroot()
-
     diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
     bounds = diagram.findall(".//omgdc:Bounds", root.nsmap)
 
