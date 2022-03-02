@@ -17,6 +17,12 @@ Note that the latter requires the [bpmn-to-image] tool, which in turn requires a
 
 ## Installation
 
+```shell
+pip install git+https://github.com/dwslab/pybpmn.git
+```
+
+## Development
+
 In order to set up the necessary environment:
 
 1. create an environment `pybpmn` with the help of [conda]:
@@ -27,21 +33,19 @@ In order to set up the necessary environment:
    ```
    conda activate pybpmn
    ```
-
-## Development
-
+   
 > **_NOTE:_**  The conda environment will have pybpmn installed in editable mode.
 > Some changes, e.g. in `setup.cfg`, might require you to run `pip install -e .` again.
 
 
 Optional and needed only once after `git clone`:
 
-1. install JupyterLab kernel
+3. install JupyterLab kernel
    ```
    python -m ipykernel install --user --name "${CONDA_DEFAULT_ENV}" --display-name "$(python -V) (${CONDA_DEFAULT_ENV})"
    ```
 
-2. install several [pre-commit] git hooks with:
+4. install several [pre-commit] git hooks with:
    ```bash
    pre-commit install
    # You might also want to run `pre-commit autoupdate`
