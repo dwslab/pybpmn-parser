@@ -1,4 +1,5 @@
 ![run_tests workflow](https://github.com/dwslab/pybpmn-parser/actions/workflows/run_tests.yaml/badge.svg)
+[![PyPI-Server](https://img.shields.io/pypi/v/pybpmn-parser.svg)](https://pypi.org/project/pybpmn-parser/)
 
 # pybpmn-parser
 
