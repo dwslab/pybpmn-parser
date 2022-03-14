@@ -1,5 +1,5 @@
 """
-    Setup file for pybpmn.
+    Setup file for pybpmn-parser.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 4.0.1.
