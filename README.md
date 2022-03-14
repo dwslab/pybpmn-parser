@@ -1,6 +1,6 @@
-![run_tests workflow](https://github.com/dwslab/pybpmn/actions/workflows/run_tests.yaml/badge.svg)
+![run_tests workflow](https://github.com/dwslab/pybpmn-parser/actions/workflows/run_tests.yaml/badge.svg)
 
-# pybpmn
+# pybpmn-parser
 
 Starter code for using the [hdBPMN] dataset for diagram recognition research.
 
@@ -18,23 +18,23 @@ Note that the latter requires the [bpmn-to-image] tool, which in turn requires a
 ## Installation
 
 ```shell
-pip install pybpmn
+pip install pybpmn-parser
 ```
 
 ## Development
 
 In order to set up the necessary environment:
 
-1. create an environment `pybpmn` with the help of [conda]:
+1. create an environment `pybpmn-parser` with the help of [conda]:
    ```
    conda env create -f environment.yml
    ```
 2. activate the new environment with:
    ```
-   conda activate pybpmn
+   conda activate pybpmn-parser
    ```
    
-> **_NOTE:_**  The conda environment will have pybpmn installed in editable mode.
+> **_NOTE:_**  The conda environment will have pybpmn-parser installed in editable mode.
 > Some changes, e.g. in `setup.cfg`, might require you to run `pip install -e .` again.
 
 
@@ -60,7 +60,7 @@ Optional and needed only once after `git clone`:
 2. Create concrete dependencies as `environment.lock.yml` for the exact reproduction of your
    environment with:
    ```bash
-   conda env export -n pybpmn -f environment.lock.yml
+   conda env export -n pybpmn-parser -f environment.lock.yml
    ```
    For multi-OS development, consider using `--no-builds` during the export.
 3. Update your current environment with respect to a new `environment.lock.yml` using:
