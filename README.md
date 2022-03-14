@@ -18,7 +18,7 @@ Note that the latter requires the [bpmn-to-image] tool, which in turn requires a
 ## Installation
 
 ```shell
-pip install git+https://github.com/dwslab/pybpmn.git
+pip install pybpmn
 ```
 
 ## Development
