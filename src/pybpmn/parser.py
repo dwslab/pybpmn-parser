@@ -114,7 +114,8 @@ class BpmnParser:
 
         id_to_obj = {}
 
-        for collaboration in root.findall("collaboration", root.nsmap):
+        collaborations = root.findall("collaboration", root.nsmap)
+        for collaboration in collaborations:
             id_to_obj.update(_create_id_to_obj_mapping(collaboration))
 
         for process in root.findall("process", root.nsmap):
@@ -124,7 +125,7 @@ class BpmnParser:
         plane = diagram[0]
         shapes = plane.findall("bpmndi:BPMNShape", plane.nsmap)
         shape_anns = yamlu.flatten(
-            _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")])
+            _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")], has_pools=len(collaborations) > 0)
             for shape in shapes
         )
         id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
@@ -142,6 +143,8 @@ class BpmnParser:
 
         anns = shape_anns + edge_anns
         self._link_text_rel_anns(anns)
+        self._link_pools(anns)
+        self._link_lanes(anns, root)
         return anns
 
     def _link_text_rel_anns(self, anns):
@@ -154,6 +157,27 @@ class BpmnParser:
             lbl_ann.set(TEXT_BELONGS_TO_REL, symb_ann)
             if self.link_text_rel_two_way:
                 symb_ann.set(TEXT_BELONGS_TO_REL, lbl_ann)
+
+    def _link_pools(self, anns):
+        # collapsed pools do not have a "processRef" and can be omitted
+        process_id_to_ann = {a.processRef: a for a in anns if a.category == syntax.POOL and "processRef" in a}
+        for a in anns:
+            if "pool" in a:
+                pool_ann = process_id_to_ann[a.get("pool")]
+                a.set("pool", pool_ann)
+
+    def _link_lanes(self, anns, root):
+        # NOTE: This only selects top-level lanes and no nested lanes
+        flow_nodes = root.findall("process/laneSet/lane/flowNodeRef", root.nsmap)
+        if len(flow_nodes) == 0:
+            return
+
+        id_to_ann = {a.id: a for a in anns if a.category != "label"}
+        for flow_node in flow_nodes:
+            # e.g. <flowNodeRef>Event_00v8k43</flowNodeRef>
+            node_ann = id_to_ann[flow_node.text]
+            lane_ann = id_to_ann[flow_node.getparent().get("id")]
+            node_ann.lane = lane_ann
 
 
 def get_tag_without_ns(element: Element):
@@ -248,10 +272,19 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
     return anns
 
 
-def _shape_to_anns(shape: Element, model_element: Element) -> List[Annotation]:
+def _shape_to_anns(shape: Element, model_element: Element, has_pools: bool) -> List[Annotation]:
     category = get_category(shape, model_element)
 
-    shape_ann = Annotation(category, bb=_child_bounds_to_bb(shape), **model_element.attrib)
+    shape_ann = Annotation(
+        category=category,
+        bb=_child_bounds_to_bb(shape),
+        **model_element.attrib
+    )
+    if has_pools and category not in syntax.COLLABORATION_CATEGORIES:
+        parent = model_element.getparent()
+        if get_tag_without_ns(parent) == "process":
+            shape_ann.pool = parent.get("id")
+
     if get_tag_without_ns(model_element) == "textAnnotation":
         text_el = model_element.find("text", model_element.nsmap)
         if text_el is not None:

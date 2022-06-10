@@ -37,6 +37,8 @@ class HdBpmnDataset(Dataset):
         self.category_translate_dict = category_translate_dict
 
         self.split_to_bpmn_paths = self.get_split_to_bpmn_paths()
+        self.img_id_to_bpmn_path = {p.stem: p for ps in self.split_to_bpmn_paths.values() for p in ps}
+
         self.bpmn_parser = BpmnParser(**parser_kwargs)
         super().__init__(
             dataset_path=coco_dataset_root,
@@ -53,8 +55,11 @@ class HdBpmnDataset(Dataset):
 
     def get_split_ann_img(self, split: str, idx: int) -> AnnotatedImage:
         bpmn_path = self.split_to_bpmn_paths[split][idx]
+        return self.parse_bpmn_path(bpmn_path)
 
+    def parse_bpmn_path(self, bpmn_path: Path):
         img_path = self.get_img_path(bpmn_path.stem)
+
         ai = self.bpmn_parser.parse_bpmn_img(bpmn_path, img_path)
 
         # "id" is reserved in coco, therefore use other field name
