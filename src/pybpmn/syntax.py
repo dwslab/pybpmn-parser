@@ -4,26 +4,29 @@ POOL = "pool"
 LANE = "lane"
 COLLABORATION_CATEGORIES = [POOL, LANE]
 
+TASK = "task"
+SUBPROCESS_COLLAPSED = "subProcessCollapsed"
 SUBPROCESS_EXPANDED = "subProcessExpanded"
-ACTIVITY_CATEGORIES = [
-    "task",
-    "subProcessCollapsed",
-    SUBPROCESS_EXPANDED,
-    "callActivity",
-]
+CALL_ACTIVITY = "callActivity"
+ACTIVITY_CATEGORIES = [TASK, SUBPROCESS_COLLAPSED, SUBPROCESS_EXPANDED, CALL_ACTIVITY]
+
 MESSAGE_EVENTS = [
     "messageStartEvent",
     "messageIntermediateCatchEvent",
     "messageIntermediateThrowEvent",
     "messageEndEvent",
 ]
+TIMER_START_EVENT = "timerStartEvent"
 TIMER_INTERMEDIATE_EVENT = "timerIntermediateEvent"
-TIMER_EVENTS = ["timerStartEvent", TIMER_INTERMEDIATE_EVENT]
+TIMER_EVENTS = [TIMER_START_EVENT, TIMER_INTERMEDIATE_EVENT]
 
+START_EVENT = "startEvent"
 INTERMEDIATE_EVENT = "intermediateEvent"
+END_EVENT = "endEvent"
+UNTYPED_EVENTS = [START_EVENT, INTERMEDIATE_EVENT, END_EVENT]
 TERMINATE_EVENT = "terminateEndEvent"
 EVENT_CATEGORIES = (
-        ["startEvent", INTERMEDIATE_EVENT, "endEvent", TERMINATE_EVENT] + MESSAGE_EVENTS + TIMER_EVENTS
+        UNTYPED_EVENTS + [TERMINATE_EVENT] + MESSAGE_EVENTS + TIMER_EVENTS
 )
 # Event definitions are modeled as child elements in BPMN XML:
 # terminateEventDefinition, messageEventDefinition, timerEventDefinition
@@ -89,30 +92,24 @@ BPMNDI_SHAPE_GROUPS = [
 ALL_CATEGORIES = yamlu.flatten(CATEGORY_GROUPS.values())
 
 EVENT_CATEGORY_TO_NO_POS_TYPE = {
-    "startEvent": "event",
-    "intermediateEvent": "event",
-    "endEvent": "event",
-    "messageStartEvent": "messageEvent",
-    "messageIntermediateCatchEvent": "messageEvent",
-    "messageIntermediateThrowEvent": "messageEvent",
-    "messageEndEvent": "messageEvent",
-    "timerStartEvent": "timerEvent",
-    "timerIntermediateEvent": "timerEvent",
+    **{k: "event" for k in UNTYPED_EVENTS},
+    **{k: "messageEvent" for k in MESSAGE_EVENTS},
+    **{k: "timerEvent" for k in TIMER_EVENTS},
 }
 
 CATEGORY_TO_LONG_NAME = {
-    "task": "Task",
-    "subProcessCollapsed": "Subprocess (collapsed)",
+    TASK: "Task",
+    SUBPROCESS_COLLAPSED: "Subprocess (collapsed)",
     SUBPROCESS_EXPANDED: "Subprocess (expanded)",
-    "callActivity": "Call Activity",
-    "startEvent": "Start Event",
+    CALL_ACTIVITY: "Call Activity",
+    START_EVENT: "Start Event",
     INTERMEDIATE_EVENT: "Intermediate Event",
-    "endEvent": "End Event",
+    END_EVENT: "End Event",
     "messageStartEvent": "Message Start Event",
     "messageIntermediateCatchEvent": "Message Intermediate Catch Event",
     "messageIntermediateThrowEvent": "Message Intermediate Throw Event",
     "messageEndEvent": "Message End Event",
-    "timerStartEvent": "Timer Start Event",
+    TIMER_START_EVENT: "Timer Start Event",
     TIMER_INTERMEDIATE_EVENT: "Timer Intermediate Event",
     "exclusiveGateway": "Exclusive Gateway",
     "parallelGateway": "Parallel Gateway",
