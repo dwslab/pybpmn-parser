@@ -280,8 +280,14 @@ def _shape_to_anns(shape: Element, model_element: Element, has_pools: bool) -> L
         bb=_child_bounds_to_bb(shape),
         **model_element.attrib
     )
-    if has_pools and category not in syntax.COLLABORATION_CATEGORIES:
+    if has_pools and category != syntax.POOL:
+        # shapes are children of process, except for lanes, which are separated by one or more additional laneSets
         parent = model_element.getparent()
+        #   <process id="Process_1gpwvpe">
+        #     <laneSet id="LaneSet_0gwy363">
+        #       <lane id="Lane_0mgb3fg" name="Claim officer">
+        if category == syntax.LANE:
+            parent = parent.getparent()
         if get_tag_without_ns(parent) == "process":
             shape_ann.pool = parent.get("id")
 
