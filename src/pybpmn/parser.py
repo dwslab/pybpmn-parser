@@ -275,9 +275,11 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
 def _shape_to_anns(shape: Element, model_element: Element, has_pools: bool) -> List[Annotation]:
     category = get_category(shape, model_element)
 
+    bounds = shape.find("omgdc:Bounds", shape.nsmap)
+
     shape_ann = Annotation(
         category=category,
-        bb=_child_bounds_to_bb(shape),
+        bb=bounds_to_bb(bounds),
         **model_element.attrib
     )
     if has_pools and category != syntax.POOL:
@@ -356,11 +358,11 @@ def _create_label_ann_if_exists(shape_or_edge, model_element) -> Optional[Annota
     if text is None or text.strip() == "":
         return None
 
-    a = Annotation(category="label", bb=_child_bounds_to_bb(label), name=text)
+    # BPMN Spec. p. 382: "The bounds of the BPMNLabel are optional"
+    bounds = label.find("omgdc:Bounds", label.nsmap)
+    if bounds is None:
+        return None
+
+    a = Annotation(category="label", bb=bounds_to_bb(bounds), name=text)
     a.set(TEXT_BELONGS_TO_REL, model_element.get("id"))
     return a
-
-
-def _child_bounds_to_bb(element: Element) -> BoundingBox:
-    bounds = element.find("omgdc:Bounds", element.nsmap)
-    return bounds_to_bb(bounds)
