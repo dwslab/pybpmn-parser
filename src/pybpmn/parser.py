@@ -10,14 +10,8 @@ from lxml.etree import _Element as Element
 from yamlu.img import AnnotatedImage, Annotation, BoundingBox
 
 from pybpmn import syntax
-from pybpmn.constants import (
-    ARROW_NEXT_REL,
-    ARROW_PREV_REL,
-    ARROW_RELATIONS,
-    TEXT_BELONGS_TO_REL,
-)
-from pybpmn.syntax import EVENT_DEFINITIONS
-from pybpmn.util import bounds_to_bb, to_int_or_float, get_omgdi_ns, parse_annotation_background_width
+from pybpmn.constants import *
+from pybpmn.util import bounds_to_bb, to_int_or_float, parse_annotation_background_width
 
 _logger = logging.getLogger(__name__)
 
@@ -114,23 +108,23 @@ class BpmnParser:
 
         id_to_obj = {}
 
-        collaborations = root.findall("collaboration", root.nsmap)
+        collaborations = root.findall("collaboration", NS_MAP)
         for collaboration in collaborations:
             id_to_obj.update(_create_id_to_obj_mapping(collaboration))
 
-        for process in root.findall("process", root.nsmap):
+        for process in root.findall("process", NS_MAP):
             id_to_obj.update(_create_id_to_obj_mapping(process))
 
-        diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
+        diagram = root.find("bpmndi:BPMNDiagram", NS_MAP)
         plane = diagram[0]
-        shapes = plane.findall("bpmndi:BPMNShape", plane.nsmap)
+        shapes = plane.findall("bpmndi:BPMNShape", NS_MAP)
         shape_anns = yamlu.flatten(
             _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")], has_pools=len(collaborations) > 0)
             for shape in shapes
         )
         id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
 
-        edges = plane.findall("bpmndi:BPMNEdge", plane.nsmap)
+        edges = plane.findall("bpmndi:BPMNEdge", NS_MAP)
 
         edge_anns = []
         for edge in edges:
@@ -168,7 +162,7 @@ class BpmnParser:
 
     def _link_lanes(self, anns, root):
         # NOTE: This only selects top-level lanes and no nested lanes
-        flow_nodes = root.findall("process/laneSet/lane/flowNodeRef", root.nsmap)
+        flow_nodes = root.findall("process/laneSet/lane/flowNodeRef", NS_MAP)
         if len(flow_nodes) == 0:
             return
 
@@ -193,9 +187,9 @@ def get_category(bpmndi_element: Element, model_element: Element):
 
     # startEvent, endEvent, intermediateCatchEvent, intermediateThrowEvent
     if category.endswith("Event"):
-        for event_type in EVENT_DEFINITIONS:
+        for event_type in syntax.EVENT_DEFINITIONS:
             # types are definition childrens: terminateEventDefinition, messageEventDefinition, timerEventDefinition
-            if model_element.find(f"{event_type}EventDefinition", model_element.nsmap) is not None:
+            if model_element.find(f"{event_type}EventDefinition", NS_MAP) is not None:
                 # startEvent -> messageStartEvent, endEvent -> terminateEndEvent, ...
                 category = f"{event_type}{category[0].upper()}{category[1:]}"
     # further shortening of untyped  and terminate events
@@ -252,10 +246,9 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
     """
     category = get_category(edge, model_element)
 
-    ns = get_omgdi_ns(edge)
     waypoints = np.array(
         [[to_int_or_float(wp.get("x")), to_int_or_float(wp.get("y"))] for wp in
-         edge.findall(f"{ns}:waypoint", edge.nsmap)]
+         edge.findall("omgdi:waypoint", NS_MAP)]
     )
     bb = BoundingBox.from_points(waypoints, allow_neg_coord=True)
 
@@ -275,7 +268,7 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
 def _shape_to_anns(shape: Element, model_element: Element, has_pools: bool) -> List[Annotation]:
     category = get_category(shape, model_element)
 
-    bounds = shape.find("omgdc:Bounds", shape.nsmap)
+    bounds = shape.find("omgdc:Bounds", NS_MAP)
 
     shape_ann = Annotation(
         category=category,
@@ -294,7 +287,7 @@ def _shape_to_anns(shape: Element, model_element: Element, has_pools: bool) -> L
             shape_ann.pool = parent.get("id")
 
     if get_tag_without_ns(model_element) == "textAnnotation":
-        text_el = model_element.find("text", model_element.nsmap)
+        text_el = model_element.find("text", NS_MAP)
         if text_el is not None:
             shape_ann.name = text_el.text
 
@@ -338,11 +331,11 @@ def _parse_edge_attribs(model_element):
     elif tag == "dataInputAssociation":
         # overwrite Property targetRef
         # TODO what is this property for?
-        attrib[ARROW_PREV_REL] = model_element.find("sourceRef", model_element.nsmap).text
+        attrib[ARROW_PREV_REL] = model_element.find("sourceRef", NS_MAP).text
         attrib[ARROW_NEXT_REL] = model_element.getparent().get("id")
     elif tag == "dataOutputAssociation":
         attrib[ARROW_PREV_REL] = model_element.getparent().get("id")
-        attrib[ARROW_NEXT_REL] = model_element.find("targetRef", model_element.nsmap).text
+        attrib[ARROW_NEXT_REL] = model_element.find("targetRef", NS_MAP).text
     else:
         raise ValueError(f"Unknown edge tag: {tag}")
 
@@ -350,7 +343,7 @@ def _parse_edge_attribs(model_element):
 
 
 def _create_label_ann_if_exists(shape_or_edge, model_element) -> Optional[Annotation]:
-    label = shape_or_edge.find("bpmndi:BPMNLabel", shape_or_edge.nsmap)
+    label = shape_or_edge.find("bpmndi:BPMNLabel", NS_MAP)
     if label is None:
         return None
 
@@ -359,7 +352,7 @@ def _create_label_ann_if_exists(shape_or_edge, model_element) -> Optional[Annota
         return None
 
     # BPMN Spec. p. 382: "The bounds of the BPMNLabel are optional"
-    bounds = label.find("omgdc:Bounds", label.nsmap)
+    bounds = label.find("omgdc:Bounds", NS_MAP)
     if bounds is None:
         return None
 

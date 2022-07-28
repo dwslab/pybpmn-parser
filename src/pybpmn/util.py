@@ -18,14 +18,6 @@ def to_int_or_float(s):
     return int(v) if v.is_integer() else v
 
 
-def get_omgdi_ns(element):
-    # sometimes namespace in xml is prefixed as di instead of omgdi
-    if "omgdi" in element.nsmap:
-        return "omgdi"
-    assert "di" in element.nsmap, f"{element.nsmap}"
-    return "di"
-
-
 def parse_annotation_background_width(bpmn_path: Path):
     """Get the width the image was resized to when annotating in the BPMN Annotator tool"""
     assert bpmn_path.suffix == ".bpmn", f"{bpmn_path}"

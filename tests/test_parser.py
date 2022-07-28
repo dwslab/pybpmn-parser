@@ -20,3 +20,10 @@ def test_bpmn_label_without_bounds():
     parser = BpmnParser()
     anns = parser.parse_bpmn_anns(bpmn_path)
     assert len(anns) > 0
+
+
+def test_bpmn_different_ns_mapping():
+    bpmn_path = resource_path / "no_default_bpmn_ns.bpmn"
+    parser = BpmnParser()
+    anns = parser.parse_bpmn_anns(bpmn_path)
+    assert len(anns) > 0

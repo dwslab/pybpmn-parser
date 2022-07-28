@@ -7,3 +7,12 @@ TEXT_BELONGS_TO_REL = "text_belongs_to"
 ARROW_KEYPOINT_FIELDS = ("tail", "head")
 ARROW_RELATIONS = (ARROW_PREV_REL, ARROW_NEXT_REL)
 RELATIONS = (*ARROW_RELATIONS, TEXT_BELONGS_TO_REL)
+
+# my bpmn namespace mapping
+NS_MAP = {
+    None: 'http://www.omg.org/spec/BPMN/20100524/MODEL',
+    'bpmndi': 'http://www.omg.org/spec/BPMN/20100524/DI',
+    'omgdc': 'http://www.omg.org/spec/DD/20100524/DC',
+    'omgdi': 'http://www.omg.org/spec/DD/20100524/DI',
+    'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
+}

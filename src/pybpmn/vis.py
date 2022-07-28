@@ -15,7 +15,8 @@ from lxml.etree import _Element as Element
 from yamlu import img_ops
 from yamlu.img import BoundingBox
 
-from pybpmn.util import bounds_to_bb, to_int_or_float, get_omgdi_ns, parse_annotation_background_width
+from pybpmn.constants import NS_MAP
+from pybpmn.util import bounds_to_bb, to_int_or_float, parse_annotation_background_width
 
 _logger = logging.getLogger(__name__)
 
@@ -110,18 +111,18 @@ def _get_approx_bpmn_bounding_box(bpmn_path):
     document = etree.parse(str(bpmn_path))
     root = document.getroot()
 
-    diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
-    shape_bounds = diagram.findall(".//bpmndi:BPMNShape/omgdc:Bounds", root.nsmap)
+    diagram = root.find("bpmndi:BPMNDiagram", NS_MAP)
+    shape_bounds = diagram.findall(".//bpmndi:BPMNShape/omgdc:Bounds", NS_MAP)
     shape_bbs = [bounds_to_bb(bound) for bound in shape_bounds]
 
-    lbl_bounds = diagram.findall(".//bpmndi:BPMNLabel/omgdc:Bounds", root.nsmap)
+    lbl_bounds = diagram.findall(".//bpmndi:BPMNLabel/omgdc:Bounds", NS_MAP)
     lbl_bbs = [bounds_to_bb(bound) for bound in lbl_bounds]
     for lbl_bb in lbl_bbs:
         # bpmn-js seems to align font vertically to top, and horizontally to center
         # since font is typically much smaller than handwriting, cut lower part of box as a heuristic
         lbl_bb.b = lbl_bb.tb_mid
 
-    waypoints = diagram.findall(f".//{get_omgdi_ns(diagram)}:waypoint", diagram.nsmap)
+    waypoints = diagram.findall(".//omgdi:waypoint", NS_MAP)
     pts = np.array([[to_int_or_float(wp.get("x")), to_int_or_float(wp.get("y"))] for wp in waypoints])
     pts_bbs = [BoundingBox.from_points(pts, allow_neg_coord=True)] if len(pts) > 0 else []
 
@@ -147,10 +148,7 @@ def get_bpmn_bounding_box(bpmn_path):
 
 def get_bpmn_bounds_waypoints(document) -> Tuple[List[Element], List[Element]]:
     root = document.getroot()
-    diagram = root.find("bpmndi:BPMNDiagram", root.nsmap)
-    bounds = diagram.findall(".//omgdc:Bounds", root.nsmap)
-
-    ns = get_omgdi_ns(diagram)
-    waypoints = diagram.findall(f".//{ns}:waypoint", diagram.nsmap)
-
+    diagram = root.find("bpmndi:BPMNDiagram", NS_MAP)
+    bounds = diagram.findall(".//omgdc:Bounds", NS_MAP)
+    waypoints = diagram.findall(".//omgdi:waypoint", NS_MAP)
     return bounds, waypoints
