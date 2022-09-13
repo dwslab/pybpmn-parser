@@ -1,4 +1,4 @@
-name: pybpmn
+name: pybpmn-parser
 dependencies:
   - python>=3.8
   - ipython
