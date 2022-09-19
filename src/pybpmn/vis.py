@@ -30,8 +30,8 @@ def bpmn_to_image(bpmn_path: Path, png_path: Path, shift_to_origin=False):
         such that its top-left is close to (0,0), and does not render elements at exact BPMNDI positions.
         when set to False, we undo this operation.
     """
-    cmd = ["bpmn-to-image", "--no-title", "--no-footer", f"{bpmn_path}{os.pathsep}{png_path}"]
-    _logger.debug("Executing: %s", " ".join(cmd))
+    cmd = f"bpmn-to-image --no-title --no-footer {bpmn_path}{os.pathsep}{png_path}"
+    _logger.info("Executing: %s", cmd)
     subprocess.run(cmd, check=True, capture_output=True, shell=True)
     img: Image.Image = Image.open(png_path)
 
