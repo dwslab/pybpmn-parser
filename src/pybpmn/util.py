@@ -1,10 +1,21 @@
 import json
+import re
 from pathlib import Path
 from typing import Tuple
 
 # noinspection PyProtectedMember
 from lxml.etree import _Element as Element
 from yamlu.img import BoundingBox
+
+
+def capitalize_fc(s: str):
+    return s[0].upper() + s[1:]
+
+
+def split_camel_case(name: str) -> str:
+    # e.g. "timerStartEvent" -> "Timer Start Event"
+    words = [word.capitalize() for word in re.split(r'(?=[A-Z])', capitalize_fc(name)) if word]
+    return " ".join(words)
 
 
 def bounds_to_bb(bounds: Element) -> BoundingBox:

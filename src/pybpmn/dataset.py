@@ -9,15 +9,21 @@ from yamlu.img import AnnotatedImage
 
 from pybpmn.constants import ARROW_KEYPOINT_FIELDS, RELATIONS
 from pybpmn.parser import BpmnParser
-from pybpmn.syntax import (
-    BPMNDI_EDGE_CATEGORIES,
-    CATEGORY_GROUPS,
-    CATEGORY_TO_LONG_NAME,
-    EVENT_CATEGORY_TO_NO_POS_TYPE,
-)
+from pybpmn.syntax import *
 from pybpmn.util import split_img_id
 
 _logger = logging.getLogger(__name__)
+
+HDBPMN_CATEGORY_GROUPS = {
+    'activity': [TASK, SUBPROCESS_COLLAPSED, SUBPROCESS_EXPANDED, CALL_ACTIVITY],
+    'event': UNTYPED_EVENTS + [TERMINATE_EVENT] + MESSAGE_EVENTS + TIMER_EVENTS,
+    'gateway': [EXCLUSIVE_GATEWAY, PARALLEL_GATEWAY, INCLUSIVE_GATEWAY, EVENT_BASED_GATEWAY],
+    'collaboration': COLLABORATION_CATEGORIES,
+    'business_object': [DATA_OBJECT, DATA_STORE],
+    'annotation': [TEXT_ANNOTATION],
+    'label': BPMNDI_LABEL_CATEGORIES,
+    'edge': BPMNDI_EDGE_CATEGORIES
+}
 
 
 class HdBpmnDataset(Dataset):
@@ -25,6 +31,7 @@ class HdBpmnDataset(Dataset):
             self,
             hdbpmn_root: Union[Path, str],
             coco_dataset_root: Union[Path, str],
+            category_groups: Dict[str, List[str]] = None,
             category_translate_dict: Dict[str, str] = EVENT_CATEGORY_TO_NO_POS_TYPE,
             keypoint_fields: List[str] = ARROW_KEYPOINT_FIELDS,
             relation_fields: List[str] = RELATIONS,
@@ -34,6 +41,7 @@ class HdBpmnDataset(Dataset):
         assert hdbpmn_root.exists(), f"{hdbpmn_root} does not exist!"
         self.hdbpmn_root = hdbpmn_root.resolve() if not hdbpmn_root.is_absolute() else hdbpmn_root
 
+        self.category_groups = HDBPMN_CATEGORY_GROUPS if category_groups is None else category_groups
         self.category_translate_dict = category_translate_dict
 
         self.split_to_bpmn_paths = self.get_split_to_bpmn_paths()
@@ -123,7 +131,7 @@ class HdBpmnDataset(Dataset):
 
         i = 0
         coco_categories = []
-        for supercategory, categories in CATEGORY_GROUPS.items():
+        for supercategory, categories in self.category_groups.items():
             for category in categories:
                 if category in self.bpmn_parser.excluded_categories:
                     continue
