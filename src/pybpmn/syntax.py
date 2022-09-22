@@ -119,14 +119,15 @@ EVENT_CATEGORY_TO_NO_POS_TYPE = {
     **{k: "timerEvent" for k in TIMER_EVENTS},
 }
 
-CATEGORY_TO_LONG_NAME = {cat: split_camel_case(cat) for cat in ALL_CATEGORIES}
+CATEGORY_TO_LONG_NAME = {
+    cat: split_camel_case(cat) for cat in [*ALL_CATEGORIES, *set(EVENT_CATEGORY_TO_NO_POS_TYPE.values())]
+}
 CATEGORY_TO_LONG_NAME.update({
     SUBPROCESS_COLLAPSED: "Subprocess (collapsed)",
     SUBPROCESS_EXPANDED: "Subprocess (expanded)",
     EVENT_BASED_GATEWAY: "Event-based Gateway",
-    "label": "Label",
-    "event": "Event",
     TERMINATE_EVENT: "Terminate End Event",
+    "label": "Label",
     "subProcess": "Subprocess",
 })
 
