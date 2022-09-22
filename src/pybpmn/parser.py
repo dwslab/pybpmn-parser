@@ -133,7 +133,7 @@ class BpmnParser:
         shape_anns = []
         for shape in shapes:
             model_element = id_to_obj[shape.get("bpmnElement")]
-            if get_tag_ns(model_element) != NS_MODEL:
+            if get_ns(model_element) != NS_MODEL:
                 _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
                 continue
             shape_anns += _shape_to_anns(shape, model_element, has_pools=len(collaborations) > 0)
@@ -146,7 +146,7 @@ class BpmnParser:
             if model_id not in id_to_obj:
                 raise InvalidBpmnException("Missing edge model element", f"{bpmn_path}: {model_id}")
             model_element = id_to_obj[model_id]
-            if get_tag_ns(model_element) != NS_MODEL:
+            if get_ns(model_element) != NS_MODEL:
                 _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
                 continue
             edge_anns += _edge_to_anns(edge, model_element, id_to_shape_ann)
@@ -192,9 +192,12 @@ class BpmnParser:
             node_ann.lane = lane_ann
 
 
-def get_tag_ns(element: Element):
+def get_ns(element: Element):
     tag_str = element.tag
-    return tag_str[1:tag_str.find("}")]
+    i = tag_str.find("}")
+    if i == -1:
+        return element.nsmap[None]
+    return tag_str[1:i]
 
 
 def get_tag_without_ns(element: Element):
@@ -260,7 +263,7 @@ def _create_id_to_obj_mapping(element):
     while len(to_visit) != 0:
         element = to_visit.pop()
         for child in element:
-            if get_tag_ns(child) != NS_MODEL:
+            if get_ns(child) != NS_MODEL:
                 continue
 
             to_visit.append(child)  # BFS
