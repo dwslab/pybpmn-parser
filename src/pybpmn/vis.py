@@ -1,9 +1,9 @@
 import functools
 import logging
 import math
+import os
 import subprocess
 import tempfile
-import os
 from pathlib import Path
 from typing import List, Tuple
 
@@ -133,6 +133,7 @@ def _get_approx_bpmn_bounding_box(bpmn_path):
 
 def get_bpmn_bounding_box(bpmn_path):
     """
+    NOTE: this does not apply rescaling to image width as done in BpmnParser.scale_anns_to_img_width_
     :return: the smallest bounding box that covers all diagram symbols
     """
     document = etree.parse(str(bpmn_path))

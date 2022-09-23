@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set
 
 import numpy as np
 import yamlu
+from PIL import Image
 from lxml import etree
 # noinspection PyProtectedMember
 from lxml.etree import _Element as Element
@@ -63,41 +64,15 @@ class BpmnParser:
         :param bpmn_path: path to the BPMN XML file
         :param img_path: path to the corresponding BPMN image
         """
-        img = yamlu.read_img(img_path)
-        img_w, img_h = img.size
-
-        img_w_annotation = parse_annotation_background_width(bpmn_path)
-        scale = img_w / img_w_annotation
-        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
 
         try:
             anns = self.parse_bpmn_anns(bpmn_path)
-            for a in anns:
-                a.bb = a.bb.scale(scale)
-
-                if a.category in syntax.BPMNDI_EDGE_CATEGORIES:
-                    a.bb = a.bb.pad_min_size(
-                        w_min=arrow_min_wh_scaled, h_min=arrow_min_wh_scaled
-                    )
-
-                if not a.bb.is_within_img(img_w, img_h):
-                    _logger.debug(
-                        "%s: clipping bb %s to img (%d,%d)",
-                        bpmn_path.name,
-                        a.bb,
-                        img_w,
-                        img_h,
-                    )
-                    a.bb = a.bb.clip_to_image(img_w, img_h)
-            for a in anns:
-                if "waypoints" in a:
-                    a.waypoints = a.waypoints * scale
-
-                    a.tail = a.waypoints[0]
-                    a.head = a.waypoints[-1]
         except Exception as e:
-            _logger.error("Error while processing: %s", bpmn_path)
+            _logger.error("Error while parsing: %s", bpmn_path)
             raise e
+
+        img = yamlu.read_img(img_path)
+        self.scale_anns_to_img_width_(anns, bpmn_path, img)
 
         anns = [a for a in anns if self._is_included_ann(a)]
 
@@ -190,6 +165,34 @@ class BpmnParser:
                 raise InvalidBpmnException("Invalid Lane flowNodeRef id", flow_node.text)
             lane_ann = id_to_ann[flow_node.getparent().get("id")]
             node_ann.lane = lane_ann
+
+    def scale_anns_to_img_width_(self, anns: List[Annotation], bpmn_path: Path, img: Image.Image):
+        img_w_annotation = parse_annotation_background_width(bpmn_path)
+        scale = img.width / img_w_annotation
+        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
+        for a in anns:
+            a.bb = a.bb.scale(scale)
+
+            if a.category in syntax.BPMNDI_EDGE_CATEGORIES:
+                a.bb = a.bb.pad_min_size(
+                    w_min=arrow_min_wh_scaled, h_min=arrow_min_wh_scaled
+                )
+
+            if not a.bb.is_within_img(img.width, img.height):
+                _logger.debug(
+                    "%s: clipping bb %s to img (%d,%d)",
+                    bpmn_path.name,
+                    a.bb,
+                    img.width,
+                    img.height,
+                )
+                a.bb = a.bb.clip_to_image(img.width, img.height)
+        for a in anns:
+            if "waypoints" in a:
+                a.waypoints = a.waypoints * scale
+
+                a.tail = a.waypoints[0]
+                a.head = a.waypoints[-1]
 
 
 def get_ns(element: Element):
