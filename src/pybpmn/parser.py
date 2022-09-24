@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set
 
 import numpy as np
 import yamlu
+from PIL import Image
 from lxml import etree
 # noinspection PyProtectedMember
 from lxml.etree import _Element as Element
@@ -11,7 +12,7 @@ from yamlu.img import AnnotatedImage, Annotation, BoundingBox
 
 from pybpmn import syntax
 from pybpmn.constants import *
-from pybpmn.util import bounds_to_bb, to_int_or_float, parse_annotation_background_width
+from pybpmn.util import bounds_to_bb, to_int_or_float, parse_annotation_background_width, capitalize_fc
 
 _logger = logging.getLogger(__name__)
 
@@ -20,6 +21,13 @@ BPMN_ATTRIB_TO_RELATION = {"sourceRef": ARROW_PREV_REL, "targetRef": ARROW_NEXT_
 
 def parse_bpmn_anns(bpmn_path: Path):
     return BpmnParser().parse_bpmn_anns(bpmn_path)
+
+
+class InvalidBpmnException(Exception):
+    def __init__(self, error_type: str, details: str = None):
+        super().__init__(error_type if details is None else f"{error_type}: {details}")
+        self.error_type = error_type
+        self.details = details
 
 
 class BpmnParser:
@@ -56,41 +64,15 @@ class BpmnParser:
         :param bpmn_path: path to the BPMN XML file
         :param img_path: path to the corresponding BPMN image
         """
-        img = yamlu.read_img(img_path)
-        img_w, img_h = img.size
-
-        img_w_annotation = parse_annotation_background_width(bpmn_path)
-        scale = img_w / img_w_annotation
-        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
 
         try:
             anns = self.parse_bpmn_anns(bpmn_path)
-            for a in anns:
-                a.bb = a.bb.scale(scale)
-
-                if a.category in syntax.BPMNDI_EDGE_CATEGORIES:
-                    a.bb = a.bb.pad_min_size(
-                        w_min=arrow_min_wh_scaled, h_min=arrow_min_wh_scaled
-                    )
-
-                if not a.bb.is_within_img(img_w, img_h):
-                    _logger.debug(
-                        "%s: clipping bb %s to img (%d,%d)",
-                        bpmn_path.name,
-                        a.bb,
-                        img_w,
-                        img_h,
-                    )
-                    a.bb = a.bb.clip_to_image(img_w, img_h)
-            for a in anns:
-                if "waypoints" in a:
-                    a.waypoints = a.waypoints * scale
-
-                    a.tail = a.waypoints[0]
-                    a.head = a.waypoints[-1]
         except Exception as e:
-            _logger.error("Error while processing: %s", bpmn_path)
+            _logger.error("Error while parsing: %s", bpmn_path)
             raise e
+
+        img = yamlu.read_img(img_path)
+        self.scale_anns_to_img_width_(anns, bpmn_path, img)
 
         anns = [a for a in anns if self._is_included_ann(a)]
 
@@ -108,6 +90,11 @@ class BpmnParser:
 
         id_to_obj = {}
 
+        choreographies = root.findall("choreography", NS_MAP)
+        if len(choreographies) > 0:
+            # slight abuse of the exception class as this is not per se invalid BPMN
+            raise InvalidBpmnException("BPMN Choreography diagrams are not implemented.")
+
         collaborations = root.findall("collaboration", NS_MAP)
         for collaboration in collaborations:
             id_to_obj.update(_create_id_to_obj_mapping(collaboration))
@@ -118,22 +105,26 @@ class BpmnParser:
         diagram = root.find("bpmndi:BPMNDiagram", NS_MAP)
         plane = diagram[0]
         shapes = plane.findall("bpmndi:BPMNShape", NS_MAP)
-        shape_anns = yamlu.flatten(
-            _shape_to_anns(shape, id_to_obj[shape.get("bpmnElement")], has_pools=len(collaborations) > 0)
-            for shape in shapes
-        )
+        shape_anns = []
+        for shape in shapes:
+            model_element = id_to_obj[shape.get("bpmnElement")]
+            if get_ns(model_element) != NS_MODEL:
+                _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
+                continue
+            shape_anns += _shape_to_anns(shape, model_element, has_pools=len(collaborations) > 0)
         id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
 
         edges = plane.findall("bpmndi:BPMNEdge", NS_MAP)
-
         edge_anns = []
         for edge in edges:
             model_id = edge.get("bpmnElement")
             if model_id not in id_to_obj:
-                raise ValueError(f"{bpmn_path}: {model_id} not in model element ids")
-            edge_anns.append(_edge_to_anns(edge, id_to_obj[model_id], id_to_shape_ann))
-
-        edge_anns = yamlu.flatten(edge_anns)
+                raise InvalidBpmnException("Missing edge model element", f"{bpmn_path}: {model_id}")
+            model_element = id_to_obj[model_id]
+            if get_ns(model_element) != NS_MODEL:
+                _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
+                continue
+            edge_anns += _edge_to_anns(edge, model_element, id_to_shape_ann)
 
         anns = shape_anns + edge_anns
         self._link_text_rel_anns(anns)
@@ -157,7 +148,7 @@ class BpmnParser:
         process_id_to_ann = {a.processRef: a for a in anns if a.category == syntax.POOL and "processRef" in a}
         for a in anns:
             if "pool" in a:
-                pool_ann = process_id_to_ann[a.get("pool")]
+                pool_ann = process_id_to_ann.get(a.get("pool"), None)
                 a.set("pool", pool_ann)
 
     def _link_lanes(self, anns, root):
@@ -169,9 +160,47 @@ class BpmnParser:
         id_to_ann = {a.id: a for a in anns if a.category != "label"}
         for flow_node in flow_nodes:
             # e.g. <flowNodeRef>Event_00v8k43</flowNodeRef>
-            node_ann = id_to_ann[flow_node.text]
+            node_ann = id_to_ann.get(flow_node.text, None)
+            if node_ann is None:
+                raise InvalidBpmnException("Invalid Lane flowNodeRef id", flow_node.text)
             lane_ann = id_to_ann[flow_node.getparent().get("id")]
             node_ann.lane = lane_ann
+
+    def scale_anns_to_img_width_(self, anns: List[Annotation], bpmn_path: Path, img: Image.Image):
+        img_w_annotation = parse_annotation_background_width(bpmn_path)
+        scale = img.width / img_w_annotation
+        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
+        for a in anns:
+            a.bb = a.bb.scale(scale)
+
+            if a.category in syntax.BPMNDI_EDGE_CATEGORIES:
+                a.bb = a.bb.pad_min_size(
+                    w_min=arrow_min_wh_scaled, h_min=arrow_min_wh_scaled
+                )
+
+            if not a.bb.is_within_img(img.width, img.height):
+                _logger.debug(
+                    "%s: clipping bb %s to img (%d,%d)",
+                    bpmn_path.name,
+                    a.bb,
+                    img.width,
+                    img.height,
+                )
+                a.bb = a.bb.clip_to_image(img.width, img.height)
+        for a in anns:
+            if "waypoints" in a:
+                a.waypoints = a.waypoints * scale
+
+                a.tail = a.waypoints[0]
+                a.head = a.waypoints[-1]
+
+
+def get_ns(element: Element):
+    tag_str = element.tag
+    i = tag_str.find("}")
+    if i == -1:
+        return element.nsmap[None]
+    return tag_str[1:i]
 
 
 def get_tag_without_ns(element: Element):
@@ -185,33 +214,48 @@ def get_category(bpmndi_element: Element, model_element: Element):
     # remove namespace from tag
     category: str = get_tag_without_ns(model_element)
 
-    # startEvent, endEvent, intermediateCatchEvent, intermediateThrowEvent
+    # startEvent, endEvent, intermediateCatchEvent, intermediateThrowEvent, boundaryEvent
     if category.endswith("Event"):
-        for event_type in syntax.EVENT_DEFINITIONS:
-            # types are definition childrens: terminateEventDefinition, messageEventDefinition, timerEventDefinition
-            if model_element.find(f"{event_type}EventDefinition", NS_MAP) is not None:
-                # startEvent -> messageStartEvent, endEvent -> terminateEndEvent, ...
-                category = f"{event_type}{category[0].upper()}{category[1:]}"
-    # further shortening of untyped  and terminate events
-    if category == "intermediateThrowEvent":
-        category = syntax.INTERMEDIATE_EVENT
-    elif category == "timerIntermediateCatchEvent":
-        category = syntax.TIMER_INTERMEDIATE_EVENT
-    elif category == "participant":
-        category = syntax.POOL
-    elif category == "subProcess":
+        # types are definition childrens: terminateEventDefinition, messageEventDefinition, timerEventDefinition
+        # NOTE parallelMultipleEvent has multiple definitions e.g. timer + message
+        event_types = [t for t in syntax.EVENT_DEFINITIONS if
+                       model_element.find(f"{t}EventDefinition", NS_MAP) is not None]
+        if len(event_types) == 1:
+            # startEvent -> messageStartEvent, endEvent -> terminateEndEvent, boundaryEvent -> timerBoundaryEvent...
+            category = event_types[0] + capitalize_fc(category)
+        elif len(event_types) > 1:
+            # parallel multiple are always catch events, so this is an error in the BPMN XML file
+            # same for boundaryEvents which should only have one event type
+            if category in {"intermediateThrowEvent", syntax.END_EVENT, "boundaryEvent"}:
+                raise InvalidBpmnException(f"Invalid {category} with multiple event definitions", ",".join(event_types))
+            category = syntax.PARALLEL_MULTIPLE_PREFIX + capitalize_fc(category)
+
+    category_mappings = {
+        # events
+        "intermediateThrowEvent": syntax.INTERMEDIATE_EVENT,
+        "timerIntermediateCatchEvent": syntax.TIMER_INTERMEDIATE_EVENT,
+        # collaboration
+        "participant": syntax.POOL,
+        # data association
+        "dataInputAssociation": syntax.DATA_ASSOCIATION,
+        "dataOutputAssociation": syntax.DATA_ASSOCIATION,
+        # data elements (remove 'Reference' suffix)
+        "dataObjectReference": syntax.DATA_OBJECT,
+        "dataStoreReference": syntax.DATA_STORE,
+    }
+    category = category_mappings.get(category, category)
+
+    if category == "subProcess":
         # <bpmndi:BPMNShape id="Activity_1cnm0ru_di" bpmnElement="Activity_1cnm0ru" isExpanded="true">
         #         <omgdc:Bounds x="473" y="455" width="452" height="190" />
         #       </bpmndi:BPMNShape>
         is_expanded = bpmndi_element.get("isExpanded", "false").lower() == "true"
-        category = "subProcessExpanded" if is_expanded else "subProcessCollapsed"
-    elif category in ["dataInputAssociation", "dataOutputAssociation"]:
-        category = syntax.DATA_ASSOCIATION
-    elif category in ["dataObjectReference", "dataStoreReference"]:
-        # remove 'Reference' suffix
-        category = category[: -len("Reference")]
+        category = syntax.SUBPROCESS_EXPANDED if is_expanded else syntax.SUBPROCESS_COLLAPSED
 
-    assert category in syntax.ALL_CATEGORIES, f"unknown category: {category}"
+    # if category not in syntax.ALL_CATEGORIES:
+    #    _logger.warning(f"Unknown category: {category}")
+    msg = f"{get_tag_without_ns(model_element)} {model_element.attrib} unknown category: {category}"
+    assert category in syntax.ALL_CATEGORIES, msg
 
     return category
 
@@ -222,9 +266,32 @@ def _create_id_to_obj_mapping(element):
     while len(to_visit) != 0:
         element = to_visit.pop()
         for child in element:
-            to_visit.append(child)
-            if child.get("id") is not None:
-                id_to_obj[child.get("id")] = child
+            if get_ns(child) != NS_MODEL:
+                continue
+
+            to_visit.append(child)  # BFS
+
+            eid = child.get("id")
+            if eid is None:
+                continue
+            if eid not in id_to_obj:
+                id_to_obj[eid] = child
+                continue
+
+            # special case (which normally should not happen): there is another model element with the same id
+            existing_element = id_to_obj[eid]
+            existing_tag = get_tag_without_ns(existing_element)
+            child_tag = get_tag_without_ns(child)
+            # ignore multiInstanceLoopCharacteristics etc.
+            if child.getparent() == existing_element and child_tag in {"multiInstanceLoopCharacteristics",
+                                                                       "standardLoopCharacteristics"}:
+                # do not overwrite existing mapping
+                continue
+            if existing_tag == child_tag and child_tag in {"dataObjectReference", "dataStoreReference", "dataState"}:
+                # sometimes data elements are listed multiple times
+                continue
+            raise InvalidBpmnException("Duplicate model element id", f"{eid} (existing={existing_tag}, new={child_tag}")
+
     return id_to_obj
 
 
@@ -250,12 +317,21 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
         [[to_int_or_float(wp.get("x")), to_int_or_float(wp.get("y"))] for wp in
          edge.findall("omgdi:waypoint", NS_MAP)]
     )
+    if len(waypoints) == 0:
+        raise InvalidBpmnException(f"{category} without waypoints")
     bb = BoundingBox.from_points(waypoints, allow_neg_coord=True)
 
     attrib = _parse_edge_attribs(model_element)
     # create Annotation links instead of linking through id
     for rel in ARROW_RELATIONS:
-        attrib[rel] = id_to_shape_ann[attrib[rel]]
+        if rel not in attrib:
+            continue
+        sid = attrib[rel]
+        ann = id_to_shape_ann.get(sid, None)
+        if ann is None and category == syntax.ASSOCIATION:
+            # TODO implement that associations can be connected to other edges (e.g. sequenceFlow)
+            continue
+        attrib[rel] = ann
     anns = [Annotation(category, bb, waypoints=waypoints, **attrib)]
 
     lbl_ann = _create_label_ann_if_exists(edge, model_element)
@@ -327,6 +403,8 @@ def _parse_edge_attribs(model_element):
 
     if tag in ["sequenceFlow", "messageFlow", "association"]:
         for old, new in BPMN_ATTRIB_TO_RELATION.items():
+            if old not in attrib:
+                raise InvalidBpmnException(f"{tag} has no {old} attrib", str(attrib))
             attrib[new] = attrib.pop(old)
     elif tag == "dataInputAssociation":
         # overwrite Property targetRef

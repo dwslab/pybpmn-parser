@@ -9,8 +9,9 @@ ARROW_RELATIONS = (ARROW_PREV_REL, ARROW_NEXT_REL)
 RELATIONS = (*ARROW_RELATIONS, TEXT_BELONGS_TO_REL)
 
 # my bpmn namespace mapping
+NS_MODEL = 'http://www.omg.org/spec/BPMN/20100524/MODEL'
 NS_MAP = {
-    None: 'http://www.omg.org/spec/BPMN/20100524/MODEL',
+    None: NS_MODEL,
     'bpmndi': 'http://www.omg.org/spec/BPMN/20100524/DI',
     'omgdc': 'http://www.omg.org/spec/DD/20100524/DC',
     'omgdi': 'http://www.omg.org/spec/DD/20100524/DI',
