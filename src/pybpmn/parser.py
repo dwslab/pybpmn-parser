@@ -38,6 +38,8 @@ class BpmnParser:
             excluded_categories: Set[str] = None,
             excluded_label_categories: Set[str] = None,
             link_text_rel_two_way: bool = False,
+            link_pools: bool = True,
+            link_lanes: bool = True,
     ):
         """
         :param arrow_min_wh: pad edge bounding boxes so that their w and h is at least arrow_min_wh
@@ -50,6 +52,8 @@ class BpmnParser:
         self.excluded_categories = {} if excluded_categories is None else excluded_categories
         self.excluded_label_categories = {} if excluded_label_categories is None else excluded_label_categories
         self.link_text_rel_two_way = link_text_rel_two_way
+        self.link_pools = link_pools
+        self.link_lanes = link_lanes
 
     def _is_included_ann(self, a: Annotation) -> bool:
         if a.category in self.excluded_categories:
@@ -128,8 +132,10 @@ class BpmnParser:
 
         anns = shape_anns + edge_anns
         self._link_text_rel_anns(anns)
-        self._link_pools(anns)
-        self._link_lanes(anns, root)
+        if self.link_pools:
+            self._link_pools(anns)
+        if self.link_lanes:
+            self._link_lanes(anns, root)
         return anns
 
     def _link_text_rel_anns(self, anns):
