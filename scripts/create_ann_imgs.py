@@ -16,21 +16,21 @@ def main(dataset_root: str):
 
     imgs_root = dataset_root / "images"
     imgs_ann_root = dataset_root / "images-annotated"
-    valid_anns_imgs_paths = []
+    valid_bpmn_to_img_path = {}
     for bpmn_path in bpmn_paths:
         img_paths = yamlu.glob(imgs_root, f"{bpmn_path.stem}.*")
-        ann_img_exists_already = os.path.exists(imgs_ann_root / f"{bpmn_path.stem}_bb.jpg")
-        if (len(img_paths) > 0 and not ann_img_exists_already):
-            valid_anns_imgs_paths.append({"bpmn_path": bpmn_path, "img_path": img_paths[0]})
+        ann_img_exists = os.path.exists(imgs_ann_root / f"{bpmn_path.stem}.jpg")
+        if len(img_paths) > 0 and not ann_img_exists:
+            valid_bpmn_to_img_path[bpmn_path] = img_paths[0]
     
-    print(f"Found {len(valid_anns_imgs_paths)} annotation files with images that don't have an annotated image already")
+    print(f"Found {len(valid_bpmn_to_img_path)} annotation files with images that don't have an annotated image already")
 
     # (ii) Parse to annotated img
     bpmn_parser = BpmnParser()
-    for ann_img_path in valid_anns_imgs_paths:
-        ann_img = bpmn_parser.parse_bpmn_img(ann_img_path["bpmn_path"], ann_img_path["img_path"], False)
-        ann_img.save_with_anns(imgs_ann_root)
-        print(f"Created annotated img of {ann_img_path['bpmn_path'].stem}")
+    for bpmn_path, img_path in valid_bpmn_to_img_path.items():
+        ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, False)
+        ann_img.save_with_anns(imgs_ann_root, suffix="")
+        print(f"Created annotated img of {bpmn_path.stem}")
 
 if __name__ == "__main__":
     main()

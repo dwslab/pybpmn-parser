@@ -77,7 +77,7 @@ class BpmnParser:
 
         img = yamlu.read_img(img_path)
 
-        if (scale_to_ann_width):
+        if scale_to_ann_width:
             self.scale_anns_to_img_width_(anns, bpmn_path, img)
 
         anns = [a for a in anns if self._is_included_ann(a)]
