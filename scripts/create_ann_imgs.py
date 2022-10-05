@@ -28,7 +28,7 @@ def main(dataset_root: str):
     # (ii) Parse to annotated img
     bpmn_parser = BpmnParser()
     for bpmn_path, img_path in valid_bpmn_to_img_path.items():
-        ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, False)
+        ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
         ann_img.save_with_anns(imgs_ann_root, suffix="")
         print(f"Created annotated img of {bpmn_path.stem}")
 
