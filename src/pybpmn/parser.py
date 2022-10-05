@@ -63,7 +63,7 @@ class BpmnParser:
         return True
 
     # noinspection PyPropertyAccess
-    def parse_bpmn_img(self, bpmn_path: Path, img_path: Path) -> AnnotatedImage:
+    def parse_bpmn_img(self, bpmn_path: Path, img_path: Path, scale_to_ann_width: bool = True) -> AnnotatedImage:
         """
         :param bpmn_path: path to the BPMN XML file
         :param img_path: path to the corresponding BPMN image
@@ -76,7 +76,9 @@ class BpmnParser:
             raise e
 
         img = yamlu.read_img(img_path)
-        self.scale_anns_to_img_width_(anns, bpmn_path, img)
+
+        if scale_to_ann_width:
+            self.scale_anns_to_img_width_(anns, bpmn_path, img)
 
         anns = [a for a in anns if self._is_included_ann(a)]
 
