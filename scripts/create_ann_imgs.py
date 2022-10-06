@@ -1,9 +1,10 @@
-import click
 import os
-import yamlu
-from yamlu.img import AnnotatedImage
 from pathlib import Path
-from pybpmn.parser import BpmnParser
+
+import click
+import yamlu
+
+from pybpmn.parser import BpmnParser, InvalidBpmnException
 
 @click.command()
 @click.argument("dataset_root", type=click.Path(file_okay=False, exists=True))
@@ -28,9 +29,12 @@ def main(dataset_root: str):
     # (ii) Parse to annotated img
     bpmn_parser = BpmnParser()
     for bpmn_path, img_path in valid_bpmn_to_img_path.items():
-        ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
-        ann_img.save_with_anns(imgs_ann_root, suffix="")
-        print(f"Created annotated img of {bpmn_path.stem}")
+        try:
+            ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
+            ann_img.save_with_anns(imgs_ann_root, suffix="")
+            print(f"Created annotated img of {bpmn_path.stem}")
+        except InvalidBpmnException:
+            print(f"Creation of annotated img {bpmn_path.stem} failed!")
 
 if __name__ == "__main__":
     main()
