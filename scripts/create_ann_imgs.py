@@ -33,8 +33,8 @@ def main(dataset_root: str):
             ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
             ann_img.save_with_anns(imgs_ann_root, suffix="")
             print(f"Created annotated img of {bpmn_path.stem}")
-        except InvalidBpmnException:
-            print(f"Creation of annotated img {bpmn_path.stem} failed!")
+        except InvalidBpmnException as e:
+            print(f"{e.error_type}, {e.details} in diagram {bpmn_path.stem}")
 
 if __name__ == "__main__":
     main()
