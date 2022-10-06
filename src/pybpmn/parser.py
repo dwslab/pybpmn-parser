@@ -22,10 +22,12 @@ BPMN_ATTRIB_TO_RELATION = {"sourceRef": ARROW_PREV_REL, "targetRef": ARROW_NEXT_
 def parse_bpmn_anns(bpmn_path: Path):
     return BpmnParser().parse_bpmn_anns(bpmn_path)
 
-# parameter error_type makes it possible to group errors by type
-# parameter details can be used to log file specific error details
 class InvalidBpmnException(Exception):
     def __init__(self, error_type: str, details: str = None):
+        """
+        :param error_type: makes it possible to group errors by type
+        :param details: can be used to log file specific error details
+        """
         super().__init__(error_type if details is None else f"{error_type}: {details}")
         self.error_type = error_type
         self.details = details
