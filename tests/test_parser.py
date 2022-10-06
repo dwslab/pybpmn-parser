@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from yamlu.img import Annotation
+
 from pybpmn.parser import BpmnParser
 from pybpmn import syntax
-from yamlu.img import Annotation
 
 resource_path = Path(__file__).resolve().parent / "resources"
 
