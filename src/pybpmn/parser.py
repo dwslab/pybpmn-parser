@@ -22,9 +22,12 @@ BPMN_ATTRIB_TO_RELATION = {"sourceRef": ARROW_PREV_REL, "targetRef": ARROW_NEXT_
 def parse_bpmn_anns(bpmn_path: Path):
     return BpmnParser().parse_bpmn_anns(bpmn_path)
 
-
 class InvalidBpmnException(Exception):
     def __init__(self, error_type: str, details: str = None):
+        """
+        :param error_type: makes it possible to group errors by type
+        :param details: can be used to log file specific error details
+        """
         super().__init__(error_type if details is None else f"{error_type}: {details}")
         self.error_type = error_type
         self.details = details
@@ -111,28 +114,40 @@ class BpmnParser:
         diagram = root.find("bpmndi:BPMNDiagram", NS_MAP)
         plane = diagram[0]
         shapes = plane.findall("bpmndi:BPMNShape", NS_MAP)
-        shape_anns = []
-        for shape in shapes:
-            model_element = id_to_obj[shape.get("bpmnElement")]
-            if get_ns(model_element) != NS_MODEL:
-                _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
-                continue
-            shape_anns += _shape_to_anns(shape, model_element, has_pools=len(collaborations) > 0)
-        id_to_shape_ann = {a.id: a for a in shape_anns if a.category != "label"}
-
         edges = plane.findall("bpmndi:BPMNEdge", NS_MAP)
-        edge_anns = []
-        for edge in edges:
-            model_id = edge.get("bpmnElement")
+        elements = shapes + edges
+
+        associations = []
+        anns = []
+        id_to_ann = {}
+        for element in elements:
+            model_id = element.get("bpmnElement")
             if model_id not in id_to_obj:
-                raise InvalidBpmnException("Missing edge model element", f"{bpmn_path}: {model_id}")
+                raise InvalidBpmnException("Missing model element", f"{bpmn_path}: {model_id}")
             model_element = id_to_obj[model_id]
             if get_ns(model_element) != NS_MODEL:
                 _logger.warning("%s: skipping %s element with custom namespace", bpmn_path, model_element.tag)
                 continue
-            edge_anns += _edge_to_anns(edge, model_element, id_to_shape_ann)
+            category = get_category(element, model_element)
 
-        anns = shape_anns + edge_anns
+            # only edge type that can have another edge as src or target
+            # therefore has to be separated and moved to the end
+            if category == syntax.ASSOCIATION:
+                associations.append(element)
+                continue
+            if category in syntax.BPMNDI_SHAPE_CATEGORIES:
+                element_anns = _shape_to_anns(element, model_element, has_pools=len(collaborations) > 0)
+            else:
+                element_anns = _edge_to_anns(element, model_element, id_to_ann)
+            anns += element_anns  
+            for ann in element_anns:
+                if ann.category != syntax.LABEL:
+                    id_to_ann[ann.id] = ann
+
+        for association in associations:
+            model_element = id_to_obj[association.get("bpmnElement")]
+            anns += _edge_to_anns(association, model_element, id_to_ann) 
+
         self._link_text_rel_anns(anns)
         if self.link_pools:
             self._link_pools(anns)
@@ -303,7 +318,7 @@ def _create_id_to_obj_mapping(element):
     return id_to_obj
 
 
-def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[str, Annotation]):
+def _edge_to_anns(edge: Element, model_element: Element, id_to_ann: Dict[str, Annotation]):
     """
     Parses edges (see syntax.BPMNDI_EDGE_CATEGORIES)
     :param edge the BPMNDI edge element
@@ -335,10 +350,10 @@ def _edge_to_anns(edge: Element, model_element: Element, id_to_shape_ann: Dict[s
         if rel not in attrib:
             continue
         sid = attrib[rel]
-        ann = id_to_shape_ann.get(sid, None)
+        ann = id_to_ann.get(sid, None)
         if ann is None and category == syntax.ASSOCIATION:
-            # TODO implement that associations can be connected to other edges (e.g. sequenceFlow)
-            continue
+            # TODO implement that associations can be connected to other associations
+            raise InvalidBpmnException("Association has another association as src or target", sid)
         attrib[rel] = ann
     anns = [Annotation(category, bb, waypoints=waypoints, **attrib)]
 
