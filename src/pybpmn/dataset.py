@@ -29,7 +29,7 @@ HDBPMN_CATEGORY_GROUPS = {
 class HdBpmnDataset(Dataset):
     def __init__(
             self,
-            hdbpmn_root: Union[Path, str],
+            dataset_root: Union[Path, str],
             coco_dataset_root: Union[Path, str],
             category_groups: Dict[str, List[str]] = None,
             category_translate_dict: Dict[str, str] = EVENT_CATEGORY_TO_NO_POS_TYPE,
@@ -37,9 +37,9 @@ class HdBpmnDataset(Dataset):
             relation_fields: List[str] = RELATIONS,
             **parser_kwargs
     ):
-        hdbpmn_root = Path(hdbpmn_root) if isinstance(hdbpmn_root, str) else hdbpmn_root
-        assert hdbpmn_root.exists(), f"{hdbpmn_root} does not exist!"
-        self.hdbpmn_root = hdbpmn_root.resolve() if not hdbpmn_root.is_absolute() else hdbpmn_root
+        dataset_root = Path(dataset_root) if isinstance(dataset_root, str) else dataset_root
+        assert dataset_root.exists(), f"{dataset_root} does not exist!"
+        self.dataset_root = dataset_root.resolve() if not dataset_root.is_absolute() else dataset_root
 
         self.category_groups = HDBPMN_CATEGORY_GROUPS if category_groups is None else category_groups
         self.category_translate_dict = category_translate_dict
@@ -68,7 +68,7 @@ class HdBpmnDataset(Dataset):
     def parse_bpmn_path(self, bpmn_path: Path):
         img_path = self.get_img_path(bpmn_path.stem)
 
-        ai = self.bpmn_parser.parse_bpmn_img(bpmn_path, img_path)
+        ai = self.bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=True)
 
         # "id" is reserved in coco, therefore use other field name
         for a in ai.annotations:
@@ -82,11 +82,11 @@ class HdBpmnDataset(Dataset):
 
     @property
     def annotations_root(self):
-        return self.hdbpmn_root / "data" / "annotations"
+        return self.dataset_root / "data" / "annotations"
 
     @property
     def images_root(self):
-        return self.hdbpmn_root / "data" / "images"
+        return self.dataset_root / "data" / "images"
 
     def get_img_path(self, img_id: str):
         img_paths = yamlu.glob(self.images_root, f"*/{img_id}.*")
@@ -103,7 +103,7 @@ class HdBpmnDataset(Dataset):
         return bpmn_paths
 
     def _parse_writer_to_split(self) -> Dict[str, str]:
-        csv_path = self.hdbpmn_root / "data" / "writer_split.csv"
+        csv_path = self.dataset_root / "data" / "writer_split.csv"
 
         with csv_path.open() as f:
             # noinspection PyTypeChecker
@@ -152,3 +152,77 @@ class HdBpmnDataset(Dataset):
                 i += 1
 
         return coco_categories
+
+class ComputerGeneratedDataset(HdBpmnDataset):
+    def __init__(
+            self,
+            dataset_root: Union[Path, str],
+            coco_dataset_root: Union[Path, str],
+            category_groups: Dict[str, List[str]] = None,
+            category_translate_dict: Dict[str, str] = EVENT_CATEGORY_TO_NO_POS_TYPE,
+            keypoint_fields: List[str] = ARROW_KEYPOINT_FIELDS,
+            relation_fields: List[str] = RELATIONS,
+            **parser_kwargs
+    ):
+
+        self.category_groups = CATEGORY_GROUPS if category_groups is None else category_groups
+        super().__init__(
+            dataset_root=dataset_root,
+            coco_dataset_root=coco_dataset_root,
+            category_groups=self.category_groups,
+            category_translate_dict=category_translate_dict,
+            keypoint_fields=keypoint_fields,
+            relation_fields=relation_fields,
+            **parser_kwargs
+        )
+
+    def parse_bpmn_path(self, bpmn_path: Path):
+        img_path = self.get_img_path(bpmn_path.stem)
+
+        ai = self.bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
+
+        # "id" is reserved in coco, therefore use other field name
+        for a in ai.annotations:
+            if "id" in a:
+                a.bpmn_id = a.id
+            if a.category in self.category_translate_dict.keys():
+                # noinspection PyPropertyAccess
+                a.category = self.category_translate_dict[a.category]
+
+        return ai
+    
+    def get_img_path(self, img_id: str):
+        img_paths = yamlu.glob(self.images_root, f"{img_id}.*")
+        assert len(img_paths) == 1, f"{img_id}: {img_paths}"
+        return img_paths[0]
+
+    def _get_all_bpmn_paths(self) -> List[Path]:
+        bpmn_paths = yamlu.glob(self.annotations_root, "**/*.bpmn")
+        assert len(bpmn_paths) > 0, f"Found no bpmn files under {self.annotations_root}"
+
+        return bpmn_paths
+
+    # Main difference to HdBpmnDataset => only split by filename, not by writer
+    # Makes it possible to convert other dataset structures
+    def _parse_filename_to_split(self) -> Dict[str, str]:
+        csv_path = self.dataset_root / "data" / "filename_split.csv"
+
+        with csv_path.open() as f:
+            # noinspection PyTypeChecker
+            filename_to_split = dict(line.rstrip().split(",") for line in f)
+
+        # delete header row
+        del filename_to_split["filename"]
+
+        return filename_to_split
+
+    def get_split_to_bpmn_paths(self) -> Dict[str, List[Path]]:
+        filename_to_split = self._parse_filename_to_split()
+
+        split_to_bpmn_paths = defaultdict(list)
+        bpmn_paths = self._get_all_bpmn_paths()
+        for bpmn_path in bpmn_paths:
+            split = filename_to_split[bpmn_path.stem]
+            split_to_bpmn_paths[split].append(bpmn_path)
+
+        return split_to_bpmn_paths
