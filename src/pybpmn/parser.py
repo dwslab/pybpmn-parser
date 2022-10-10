@@ -43,6 +43,7 @@ class BpmnParser:
             link_text_rel_two_way: bool = False,
             link_pools: bool = True,
             link_lanes: bool = True,
+            scale_to_ann_width: bool = True
     ):
         """
         :param arrow_min_wh: pad edge bounding boxes so that their w and h is at least arrow_min_wh
@@ -57,6 +58,7 @@ class BpmnParser:
         self.link_text_rel_two_way = link_text_rel_two_way
         self.link_pools = link_pools
         self.link_lanes = link_lanes
+        self.scale_to_ann_width = scale_to_ann_width
 
     def _is_included_ann(self, a: Annotation) -> bool:
         if a.category in self.excluded_categories:
@@ -66,7 +68,7 @@ class BpmnParser:
         return True
 
     # noinspection PyPropertyAccess
-    def parse_bpmn_img(self, bpmn_path: Path, img_path: Path, scale_to_ann_width: bool = True) -> AnnotatedImage:
+    def parse_bpmn_img(self, bpmn_path: Path, img_path: Path) -> AnnotatedImage:
         """
         :param bpmn_path: path to the BPMN XML file
         :param img_path: path to the corresponding BPMN image
@@ -80,7 +82,7 @@ class BpmnParser:
 
         img = yamlu.read_img(img_path)
 
-        if scale_to_ann_width:
+        if self.scale_to_ann_width:
             self.scale_anns_to_img_width_(anns, bpmn_path, img)
 
         anns = [a for a in anns if self._is_included_ann(a)]
