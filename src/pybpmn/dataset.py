@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Union
-import abc
+from abc import abstractmethod
 
 import yamlu
 from yamlu.coco import Dataset
@@ -27,7 +27,7 @@ HDBPMN_CATEGORY_GROUPS = {
 }
 
 
-class BpmnDataset(Dataset, metaclass=abc.ABCMeta):
+class BpmnDataset(Dataset):
 
     def __init__(
             self,
@@ -63,11 +63,12 @@ class BpmnDataset(Dataset, metaclass=abc.ABCMeta):
             self.split_n_imgs,
         )
 
-    @abc.abstractmethod
+    @abstractmethod
     def get_split_to_bpmn_paths(self) -> Dict[str, List[Path]]:
         """
         Returns Dict from split (train/test/val) to list of corresponding bpmn paths
         """
+        pass
 
     def get_split_ann_img(self, split: str, idx: int) -> AnnotatedImage:
         bpmn_path = self.split_to_bpmn_paths[split][idx]
@@ -134,6 +135,7 @@ class BpmnDataset(Dataset, metaclass=abc.ABCMeta):
 
         return coco_categories
 
+
 class HdBpmnDataset(BpmnDataset):
     def __init__(
             self,
@@ -146,12 +148,10 @@ class HdBpmnDataset(BpmnDataset):
             **parser_kwargs
     ):
 
-        self.category_groups = HDBPMN_CATEGORY_GROUPS if category_groups is None else category_groups
-        
         super().__init__(
             bpmn_dataset_root=bpmn_dataset_root,
             coco_dataset_root=coco_dataset_root,
-            category_groups=self.category_groups,
+            category_groups=HDBPMN_CATEGORY_GROUPS if category_groups is None else category_groups,
             category_translate_dict=category_translate_dict,
             keypoint_fields=keypoint_fields,
             relation_fields=relation_fields,
@@ -183,6 +183,7 @@ class HdBpmnDataset(BpmnDataset):
 
         return split_to_bpmn_paths
 
+
 class ComputerGeneratedDataset(BpmnDataset):
     def __init__(
             self,
@@ -194,13 +195,11 @@ class ComputerGeneratedDataset(BpmnDataset):
             relation_fields: List[str] = RELATIONS,
             **parser_kwargs
     ):
-
-        self.category_groups = CATEGORY_GROUPS if category_groups is None else category_groups
         
         super().__init__(
             bpmn_dataset_root=bpmn_dataset_root,
             coco_dataset_root=coco_dataset_root,
-            category_groups=self.category_groups,
+            category_groups=CATEGORY_GROUPS if category_groups is None else category_groups,
             category_translate_dict=category_translate_dict,
             keypoint_fields=keypoint_fields,
             relation_fields=relation_fields,
