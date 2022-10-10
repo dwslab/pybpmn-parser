@@ -43,7 +43,7 @@ def main(
     logging.basicConfig(format="%(asctime)s %(levelname)s - %(message)s", level=log_level)
     # logging.getLogger("yamlu.img").setLevel(logging.ERROR)
 
-    ds = HdBpmnDataset(hdbpmn_root=hdbpmn_root, coco_dataset_root=coco_dataset_root)
+    ds = HdBpmnDataset(bpmn_dataset_root=hdbpmn_root, coco_dataset_root=coco_dataset_root)
 
     exporter = CocoDatasetExport(
         ds=ds,
