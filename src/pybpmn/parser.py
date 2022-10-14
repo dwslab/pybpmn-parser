@@ -194,6 +194,7 @@ class BpmnParser:
     def scale_anns_to_img_width_(self, anns: List[Annotation], bpmn_path: Path, img: Image.Image):
         img_w_annotation = parse_annotation_background_width(bpmn_path)
         scale = img.width / img_w_annotation
+        # FIXME separate scaling and arrow min bb size logic
         arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
         for a in anns:
             a.bb = a.bb.scale(scale)
