@@ -4,10 +4,10 @@ import logging
 from typing import List, Optional
 
 import click
-from IPython.core import ultratb
 from yamlu.coco import CocoDatasetExport
 
 import pybpmn
+from pybpmn import syntax
 from pybpmn.constants import VALID_SPLITS
 from pybpmn.dataset import ComputerGeneratedDataset
 
@@ -39,7 +39,20 @@ def main(
     logging.basicConfig(format="%(asctime)s %(levelname)s - %(message)s", level=log_level)
     # logging.getLogger("yamlu.img").setLevel(logging.ERROR)
 
-    ds = ComputerGeneratedDataset(bpmn_dataset_root=dataset_root, coco_dataset_root=coco_dataset_root)
+    # don't create objects for labels inside plain activities (e.g. task) as they do not have to be detected
+    # during inference, the label of a task is defined by all text located within that task
+    excluded_label_categories = [c for c in syntax.ACTIVITY_CATEGORIES if c not in syntax.ACTIVITIES_WITH_CHILD_SHAPES]
+
+    # userTask -> task etc.
+    category_translate_dict = {t: syntax.TASK for t in syntax.TASK_TYPE_CATEGORIES}
+
+    ds = ComputerGeneratedDataset(
+        bpmn_dataset_root=dataset_root,
+        coco_dataset_root=coco_dataset_root,
+        category_translate_dict=category_translate_dict,
+        # BpmnParser arguments
+        excluded_label_categories=excluded_label_categories
+    )
 
     exporter = CocoDatasetExport(
         ds=ds,
