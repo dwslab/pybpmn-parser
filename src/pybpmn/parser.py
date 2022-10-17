@@ -82,11 +82,13 @@ class BpmnParser:
 
         img = yamlu.read_img(img_path)
 
+        arrow_min_wh = self.arrow_min_wh
         if self.scale_to_ann_width:
             self.scale_anns_to_img_width_(anns, bpmn_path, img)
-        else:
-            edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
-            self.resize_arrows_to_min_wh(edge_anns, self.arrow_min_wh)
+            arrow_min_wh = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
+
+        edge_anns = [a for a in anns if a.category in syntax.BPMNDI_EDGE_CATEGORIES]
+        self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh)
             
 
         anns = [a for a in anns if self._is_included_ann(a)]
@@ -218,9 +220,6 @@ class BpmnParser:
                 a.tail = a.waypoints[0]
                 a.head = a.waypoints[-1]
 
-        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
-        edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
-        self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh_scaled)
 
     def resize_arrows_to_min_wh(self, edge_anns: List[Annotation], arrow_min_wh: float):
         for a in edge_anns:
