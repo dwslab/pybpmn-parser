@@ -199,10 +199,6 @@ class BpmnParser:
         img_w_annotation = parse_annotation_background_width(bpmn_path)
         scale = img.width / img_w_annotation
 
-        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
-        edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
-        self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh_scaled)
-
         for a in anns:
             a.bb = a.bb.scale(scale)
 
@@ -221,6 +217,10 @@ class BpmnParser:
 
                 a.tail = a.waypoints[0]
                 a.head = a.waypoints[-1]
+
+        arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
+        edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
+        self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh_scaled)
 
     def resize_arrows_to_min_wh(self, edge_anns: List[Annotation], arrow_min_wh: float):
         for a in edge_anns:
