@@ -84,6 +84,10 @@ class BpmnParser:
 
         if self.scale_to_ann_width:
             self.scale_anns_to_img_width_(anns, bpmn_path, img)
+        else:
+            edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
+            self.resize_arrows_to_min_wh(edge_anns, self.arrow_min_wh)
+            
 
         anns = [a for a in anns if self._is_included_ann(a)]
 
@@ -194,15 +198,13 @@ class BpmnParser:
     def scale_anns_to_img_width_(self, anns: List[Annotation], bpmn_path: Path, img: Image.Image):
         img_w_annotation = parse_annotation_background_width(bpmn_path)
         scale = img.width / img_w_annotation
-        # FIXME separate scaling and arrow min bb size logic
+
         arrow_min_wh_scaled = self.arrow_min_wh * max(img.size) / self.img_max_size_ref
+        edge_anns = filter(lambda a: a.category in syntax.BPMNDI_EDGE_CATEGORIES, anns)
+        self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh_scaled)
+
         for a in anns:
             a.bb = a.bb.scale(scale)
-
-            if a.category in syntax.BPMNDI_EDGE_CATEGORIES:
-                a.bb = a.bb.pad_min_size(
-                    w_min=arrow_min_wh_scaled, h_min=arrow_min_wh_scaled
-                )
 
             if not a.bb.is_within_img(img.width, img.height):
                 _logger.debug(
@@ -219,6 +221,14 @@ class BpmnParser:
 
                 a.tail = a.waypoints[0]
                 a.head = a.waypoints[-1]
+
+    def resize_arrows_to_min_wh(self, edge_anns: List[Annotation], arrow_min_wh: float):
+        for a in edge_anns:
+            assert a.category in syntax.BPMNDI_EDGE_CATEGORIES
+
+            a.bb = a.bb.pad_min_size(
+                w_min=arrow_min_wh, h_min=arrow_min_wh
+            )
 
 
 def get_ns(element: Element):
