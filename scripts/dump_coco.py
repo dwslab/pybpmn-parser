@@ -9,6 +9,7 @@ from IPython.core import ultratb
 from yamlu.coco import CocoDatasetExport
 
 import pybpmn
+from pybpmn import syntax
 from pybpmn.constants import VALID_SPLITS
 from pybpmn.dataset import HdBpmnDataset
 
@@ -43,7 +44,15 @@ def main(
     logging.basicConfig(format="%(asctime)s %(levelname)s - %(message)s", level=log_level)
     # logging.getLogger("yamlu.img").setLevel(logging.ERROR)
 
-    ds = HdBpmnDataset(bpmn_dataset_root=hdbpmn_root, coco_dataset_root=coco_dataset_root)
+    ds = HdBpmnDataset(
+        bpmn_dataset_root=hdbpmn_root,
+        coco_dataset_root=coco_dataset_root,
+        # exclude categories that are too infrequent
+        category_translate_dict={syntax.TERMINATE_EVENT: syntax.END_EVENT},
+        # BpmnParser args
+        # association arrows are not consistently annotated
+        excluded_categories={syntax.ASSOCIATION, syntax.TEXT_ANNOTATION}
+    )
 
     exporter = CocoDatasetExport(
         ds=ds,
