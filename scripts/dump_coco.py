@@ -44,6 +44,10 @@ def main(
     logging.basicConfig(format="%(asctime)s %(levelname)s - %(message)s", level=log_level)
     # logging.getLogger("yamlu.img").setLevel(logging.ERROR)
 
+    # don't create objects for labels inside plain activities (e.g. task) as they do not have to be detected
+    # during inference, the label of a task is defined by all text located within that task
+    excluded_label_categories = [c for c in syntax.ACTIVITY_CATEGORIES if c not in syntax.ACTIVITIES_WITH_CHILD_SHAPES]
+
     ds = HdBpmnDataset(
         bpmn_dataset_root=hdbpmn_root,
         coco_dataset_root=coco_dataset_root,
@@ -51,7 +55,8 @@ def main(
         category_translate_dict={syntax.TERMINATE_EVENT: syntax.END_EVENT},
         # BpmnParser args
         # association arrows are not consistently annotated
-        excluded_categories={syntax.ASSOCIATION, syntax.TEXT_ANNOTATION}
+        excluded_categories={syntax.ASSOCIATION, syntax.TEXT_ANNOTATION},
+        excluded_label_categories=excluded_label_categories,
     )
 
     exporter = CocoDatasetExport(
