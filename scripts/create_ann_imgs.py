@@ -27,10 +27,10 @@ def main(dataset_root: str):
     print(f"Found {len(valid_bpmn_to_img_path)} annotation files with images that don't have an annotated image already")
 
     # (ii) Parse to annotated img
-    bpmn_parser = BpmnParser()
+    bpmn_parser = BpmnParser(scale_to_ann_width=False)
     for bpmn_path, img_path in valid_bpmn_to_img_path.items():
         try:
-            ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path, scale_to_ann_width=False)
+            ann_img = bpmn_parser.parse_bpmn_img(bpmn_path, img_path)
             ann_img.save_with_anns(imgs_ann_root, suffix="")
             print(f"Created annotated img of {bpmn_path.stem}")
         except InvalidBpmnException as e:
