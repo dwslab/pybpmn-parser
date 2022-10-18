@@ -22,6 +22,7 @@ BPMN_ATTRIB_TO_RELATION = {"sourceRef": ARROW_PREV_REL, "targetRef": ARROW_NEXT_
 def parse_bpmn_anns(bpmn_path: Path):
     return BpmnParser().parse_bpmn_anns(bpmn_path)
 
+
 class InvalidBpmnException(Exception):
     def __init__(self, error_type: str, details: str = None):
         """
@@ -89,7 +90,6 @@ class BpmnParser:
 
         edge_anns = [a for a in anns if a.category in syntax.BPMNDI_EDGE_CATEGORIES]
         self.resize_arrows_to_min_wh(edge_anns, arrow_min_wh)
-            
 
         anns = [a for a in anns if self._is_included_ann(a)]
 
@@ -147,14 +147,14 @@ class BpmnParser:
                 element_anns = _shape_to_anns(element, model_element, has_pools=len(collaborations) > 0)
             else:
                 element_anns = _edge_to_anns(element, model_element, id_to_ann)
-            anns += element_anns  
+            anns += element_anns
             for ann in element_anns:
                 if ann.category != syntax.LABEL:
                     id_to_ann[ann.id] = ann
 
         for association in associations:
             model_element = id_to_obj[association.get("bpmnElement")]
-            anns += _edge_to_anns(association, model_element, id_to_ann) 
+            anns += _edge_to_anns(association, model_element, id_to_ann)
 
         self._link_text_rel_anns(anns)
         if self.link_pools:
@@ -219,7 +219,6 @@ class BpmnParser:
 
                 a.tail = a.waypoints[0]
                 a.head = a.waypoints[-1]
-
 
     def resize_arrows_to_min_wh(self, edge_anns: List[Annotation], arrow_min_wh: float):
         for a in edge_anns:

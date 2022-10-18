@@ -1,8 +1,8 @@
 import logging
+from abc import abstractmethod
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Union
-from abc import abstractmethod
 
 import yamlu
 from yamlu.coco import Dataset
@@ -147,7 +147,6 @@ class HdBpmnDataset(BpmnDataset):
             relation_fields: List[str] = RELATIONS,
             **parser_kwargs
     ):
-
         super().__init__(
             bpmn_dataset_root=bpmn_dataset_root,
             coco_dataset_root=coco_dataset_root,
@@ -158,7 +157,7 @@ class HdBpmnDataset(BpmnDataset):
             scale_to_ann_width=True,
             **parser_kwargs
         )
-    
+
     def _parse_writer_to_split(self) -> Dict[str, str]:
         csv_path = self.bpmn_dataset_root / "data" / "writer_split.csv"
 
@@ -195,7 +194,6 @@ class ComputerGeneratedDataset(BpmnDataset):
             relation_fields: List[str] = RELATIONS,
             **parser_kwargs
     ):
-        
         super().__init__(
             bpmn_dataset_root=bpmn_dataset_root,
             coco_dataset_root=coco_dataset_root,
