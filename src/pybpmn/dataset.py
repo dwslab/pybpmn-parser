@@ -211,10 +211,18 @@ class ComputerGeneratedDataset(BpmnDataset):
         filename_to_split = self._parse_filename_to_split()
 
         split_to_bpmn_paths = defaultdict(list)
-        bpmn_paths = self._get_all_bpmn_paths()
-        for bpmn_path in bpmn_paths:
-            split = filename_to_split[bpmn_path.stem]
-            split_to_bpmn_paths[split].append(bpmn_path)
+        fname_to_bpmn_path = {p.stem: p for p in self._get_all_bpmn_paths()}
+
+        num_of_missing_files = 0
+        for fname, split in filename_to_split.items():
+            if fname in fname_to_bpmn_path:
+                bpmn_path = fname_to_bpmn_path[fname]
+                split_to_bpmn_paths[split].append(bpmn_path)
+            else:
+                num_of_missing_files += 1
+        
+        if num_of_missing_files > 0:
+            _logger.warning("%d filenames in csv do not exist", num_of_missing_files)
 
         return split_to_bpmn_paths
 
